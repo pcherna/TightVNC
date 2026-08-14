@@ -258,6 +258,7 @@
   <ItemGroup>
     <ClCompile Include="ConnectionConfig.cpp" />
     <ClCompile Include="ConnectionConfigSM.cpp" />
+    <ClCompile Include="FtAutoOverwrite.cpp" />
     <ClCompile Include="FtHostState.cpp" />
     <ClCompile Include="FtPlaces.cpp" />
     <ClCompile Include="ViewerConfig.cpp" />
@@ -266,6 +267,7 @@
   <ItemGroup>
     <ClInclude Include="ConnectionConfig.h" />
     <ClInclude Include="ConnectionConfigSM.h" />
+    <ClInclude Include="FtAutoOverwrite.h" />
     <ClInclude Include="FtHostState.h" />
     <ClInclude Include="FtPlaces.h" />
     <ClInclude Include="ViewerConfig.h" />

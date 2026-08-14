@@ -36,6 +36,7 @@
 ViewerConfig::ViewerConfig(const TCHAR registryPath[])
 : m_logLevel(0), m_listenPort(5500), m_historyLimit(32),
   m_showToolbar(true), m_promptOnFullscreen(true),
+  m_skipDownloadConfirmation(false),
   m_conHistory(&m_conHistoryKey, m_historyLimit),
   m_logger(0)
 {
@@ -79,6 +80,9 @@ bool ViewerConfig::loadFromStorage(SettingsManager *storage)
     loadAllOk = false;
   }
 
+  TEST_FAIL(storage->getBoolean(_T("SkipDownloadConfirm"),
+                                &m_skipDownloadConfirmation), loadAllOk);
+
   return loadAllOk;
 }
 
@@ -91,6 +95,7 @@ bool ViewerConfig::saveToStorage(SettingsManager *storage) const
   TEST_FAIL(storage->setInt(_T("HistoryLimit"), m_historyLimit), saveAllOk);
   TEST_FAIL(storage->setBoolean(_T("NoToolbar"), m_showToolbar), saveAllOk);
   TEST_FAIL(storage->setBoolean(_T("SkipFullScreenPrompt"), !m_promptOnFullscreen), saveAllOk);
+  TEST_FAIL(storage->setBoolean(_T("SkipDownloadConfirm"), m_skipDownloadConfirmation), saveAllOk);
 
   return saveAllOk;
 }
@@ -194,6 +199,18 @@ bool ViewerConfig::isPromptOnFullscreenEnabled() const
 {
   AutoLock l(&m_cs);
   return m_promptOnFullscreen;
+}
+
+void ViewerConfig::skipDownloadConfirmation(bool skip)
+{
+  AutoLock l(&m_cs);
+  m_skipDownloadConfirmation = skip;
+}
+
+bool ViewerConfig::isDownloadConfirmationSkipped() const
+{
+  AutoLock l(&m_cs);
+  return m_skipDownloadConfirmation;
 }
 
 const TCHAR *ViewerConfig::getPathToLogFile() const

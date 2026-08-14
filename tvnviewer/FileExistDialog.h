@@ -53,6 +53,16 @@ public:
 
   void resetDialogResultValue();
 
+  //
+  // True once Skip All has been pressed during the current operation.
+  //
+  // Exposed so that a caller which would otherwise answer for the user can
+  // stand down. Skip All is an explicit instruction about the whole batch,
+  // and it has to outrank any stored rule.
+  //
+
+  bool isSkipAll() const { return m_skipAll; }
+
 protected:
 
   //

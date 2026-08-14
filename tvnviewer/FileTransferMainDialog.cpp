@@ -30,6 +30,8 @@
 #include "FileRenameDialog.h"
 #include "FtEditPlacesDialog.h"
 
+#include "client-config-lib/ViewerConfig.h"
+
 #include "file-lib/File.h"
 
 #include "gui/Menu.h"
@@ -48,6 +50,8 @@ FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core,
   m_chainFiredGeneration(0),
   m_localPlaces(RegistryPaths::VIEWER_PATH, false),
   m_remotePlaces(RegistryPaths::VIEWER_PATH, true),
+  m_autoOverwrite(RegistryPaths::VIEWER_PATH),
+  m_downloadInProgress(false),
   m_placesTooltip(0)
 {
   setResourceId(ftclient_mainDialog);
@@ -80,6 +84,30 @@ int FileTransferMainDialog::onFtTargetFileExists(FileInfo *sourceFileInfo,
                                                  FileInfo *targetFileInfo,
                                                  const TCHAR *pathToTargetFile)
 {
+  //
+  // Skip All is checked first because it says something about the whole
+  // batch, and the user said it out loud. Overwrite All needs no check, since
+  // it already reaches the same answer.
+  //
+
+  if (m_downloadInProgress && !m_fileExistDialog.isSkipAll()) {
+    //
+    // Taken from the path rather than from either FileInfo. The two
+    // operations hand their source and target to this method in opposite
+    // order, and a FileInfo carries whatever name it was built with, while
+    // the destination path is the same thing in both directions. Downloads
+    // build it with backslashes, which is the separator File splits on.
+    //
+
+    StringStorage fileName;
+    File targetFile(pathToTargetFile);
+    targetFile.getName(&fileName);
+
+    if (m_autoOverwrite.matchesAny(fileName.getString())) {
+      return CopyFileEventListener::TFE_OVERWRITE;
+    }
+  }
+
   m_fileExistDialog.setFilesInfo(targetFileInfo,
                                  sourceFileInfo,
                                  pathToTargetFile);
@@ -607,6 +635,8 @@ void FileTransferMainDialog::onUploadButtonClick()
 
   m_fileExistDialog.resetDialogResultValue();
 
+  m_downloadInProgress = false;
+
   m_ftCore->uploadOperation(filesInfo, siCount,
                             localFolder.getString(),
                             remoteFolder.getString());
@@ -634,13 +664,15 @@ void FileTransferMainDialog::onDownloadButtonClick()
     filesInfo[i] = *fileInfo;
   }
 
-  if (MessageBox(m_ctrlThis.getWindow(),
-                 _T("Do you wish to download the selected files?"),
-                 _T("Download Files"),
-                 MB_YESNO | MB_ICONQUESTION) != IDYES) {
-    delete[] indexes;
-    delete[] filesInfo;
-    return ;
+  if (!ViewerConfig::getInstance()->isDownloadConfirmationSkipped()) {
+    if (MessageBox(m_ctrlThis.getWindow(),
+                   _T("Do you wish to download the selected files?"),
+                   _T("Download Files"),
+                   MB_YESNO | MB_ICONQUESTION) != IDYES) {
+      delete[] indexes;
+      delete[] filesInfo;
+      return ;
+    }
   }
 
   StringStorage remoteFolder;
@@ -650,6 +682,14 @@ void FileTransferMainDialog::onDownloadButtonClick()
   getPathToCurrentLocalFolder(&localFolder);
 
   m_fileExistDialog.resetDialogResultValue();
+
+  //
+  // Reread rather than trust what was loaded when the dialog opened, so that
+  // a pattern added in the configuration dialog applies to this download.
+  //
+
+  m_downloadInProgress = true;
+  m_autoOverwrite.load();
 
   m_ftCore->downloadOperation(filesInfo, siCount,
                               localFolder.getString(),

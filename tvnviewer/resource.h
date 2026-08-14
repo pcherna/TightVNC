@@ -186,6 +186,12 @@
 #define IDC_CWARN_FS                    1088
 #define IDC_ID_EDIT                     1089
 #define IDC_LABEL_ID                    1090
+#define IDC_CFT_SKIP_CONFIRM            1107
+#define IDC_CFT_PATTERN_LIST            1108
+#define IDC_CFT_PATTERN_EDIT            1109
+#define IDC_CFT_ADD_PATTERN             1110
+#define IDC_CFT_REPLACE_PATTERN         1111
+#define IDC_CFT_REMOVE_PATTERN          1112
 #define ID_CONN_OPTIONS                 40001
 #define ID_CONN_INFO                    40002
 #define ID_SHOW_TOOLBAR                 40004

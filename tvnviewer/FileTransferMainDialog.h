@@ -34,6 +34,7 @@
 
 #include "ft-common/FileInfo.h"
 
+#include "client-config-lib/FtAutoOverwrite.h"
 #include "client-config-lib/FtHostState.h"
 #include "client-config-lib/FtPlaces.h"
 
@@ -511,6 +512,26 @@ protected:
 
   FtPlaces m_localPlaces;
   FtPlaces m_remotePlaces;
+
+  //
+  // Patterns whose downloads overwrite an existing local file without asking.
+  // Reloaded when a download starts, so an edit made in the configuration
+  // dialog reaches the transfer already in front of the user.
+  //
+
+  FtAutoOverwrite m_autoOverwrite;
+
+  //
+  // True while a download is the operation in flight, false while an upload
+  // is.
+  //
+  // onFtTargetFileExists serves both directions and the core does not offer
+  // the running state, so the two button handlers record it on the way past.
+  // The patterns must not answer for an upload, where the file at risk
+  // belongs to the other machine.
+  //
+
+  bool m_downloadInProgress;
 
 private:
 
