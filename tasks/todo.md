@@ -21,9 +21,10 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 - [x] Add `FtHostState` to `client-config-lib.vcproj`, `.vcxproj`, `.filters`
 - [x] Compile `tvnviewer` on Windows. Clean on the first attempt, with the
       toolset and SDK retargeted
-- [ ] Confirm the build still works now that the SDK version moved into
+- [x] Confirm the build still works now that the SDK version moved into
       `Directory.Build.props`
-- [ ] Run the four phase 1 manual checks against a real server
+- [x] Run the four phase 1 manual checks against a real server. All pass,
+      including the fallback when a remembered remote folder is gone
 
 ## Phase 2: named places
 
