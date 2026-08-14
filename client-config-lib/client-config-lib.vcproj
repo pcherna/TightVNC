@@ -545,6 +545,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\FtPlaces.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ViewerConfig.cpp"
 				>
 			</File>
@@ -568,6 +572,10 @@
 			</File>
 			<File
 				RelativePath=".\FtHostState.h"
+				>
+			</File>
+			<File
+				RelativePath=".\FtPlaces.h"
 				>
 			</File>
 			<File

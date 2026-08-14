@@ -31,6 +31,8 @@
 
 #include "file-lib/File.h"
 
+#include "gui/Menu.h"
+
 #include "NamingDefs.h"
 #include "resource.h"
 #include <stdio.h>
@@ -42,7 +44,9 @@ FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core,
   m_chainIndex(0),
   m_chainActive(false),
   m_chainGeneration(0),
-  m_chainFiredGeneration(0)
+  m_chainFiredGeneration(0),
+  m_localPlaces(RegistryPaths::VIEWER_PATH, false),
+  m_remotePlaces(RegistryPaths::VIEWER_PATH, true)
 {
   setResourceId(ftclient_mainDialog);
 
@@ -204,6 +208,12 @@ BOOL FileTransferMainDialog::onCommand(UINT controlID, UINT notificationID)
     break;
   case IDC_DOWNLOAD_BUTTON:
     onDownloadButtonClick();
+    break;
+  case IDC_LOCAL_PLACES_BUTTON:
+    onPlacesButtonClick(false);
+    break;
+  case IDC_REMOTE_PLACES_BUTTON:
+    onPlacesButtonClick(true);
     break;
   }
   return TRUE;
@@ -777,6 +787,9 @@ void FileTransferMainDialog::enableControls(bool enabled)
   m_uploadButton.setEnabled(enabled && m_ftCore->getSupportedOps().isUploadSupported());
   m_downloadButton.setEnabled(enabled && m_ftCore->getSupportedOps().isDownloadSupported());
 
+  m_localPlacesButton.setEnabled(enabled);
+  m_remotePlacesButton.setEnabled(enabled);
+
   m_localFileListView.setEnabled(enabled);
   m_remoteFileListView.setEnabled(enabled);
 
@@ -799,6 +812,9 @@ void FileTransferMainDialog::initControls()
 
   m_uploadButton.setWindow(GetDlgItem(hwnd, IDC_UPLOAD_BUTTON));
   m_downloadButton.setWindow(GetDlgItem(hwnd, IDC_DOWNLOAD_BUTTON));
+
+  m_localPlacesButton.setWindow(GetDlgItem(hwnd, IDC_LOCAL_PLACES_BUTTON));
+  m_remotePlacesButton.setWindow(GetDlgItem(hwnd, IDC_REMOTE_PLACES_BUTTON));
 
   m_cancelButton.setWindow(GetDlgItem(hwnd, IDC_CANCEL_BUTTON));
 
@@ -923,7 +939,8 @@ void FileTransferMainDialog::restoreRemoteFolder()
 }
 
 void FileTransferMainDialog::startRemoteChain(const vector<StringStorage> *candidates,
-                                              const TCHAR *description)
+                                              const TCHAR *description,
+                                              const TCHAR *placeName)
 {
   //
   // Copied element by element rather than by vector assignment, because
@@ -939,6 +956,7 @@ void FileTransferMainDialog::startRemoteChain(const vector<StringStorage> *candi
   m_chainIndex = 0;
   m_chainActive = false;
   m_chainDescription.setString(description);
+  m_chainPlaceName.setString(placeName != 0 ? placeName : _T(""));
   m_chainGeneration++;
 
   if (m_chainCandidates.empty()) {
@@ -959,6 +977,7 @@ void FileTransferMainDialog::endRemoteChain()
 {
   m_chainActive = false;
   m_chainCandidates.clear();
+  m_chainPlaceName.setString(_T(""));
   m_chainGeneration++;
 }
 
@@ -970,6 +989,15 @@ bool FileTransferMainDialog::isChainReplyExpected() const
 void FileTransferMainDialog::onRemoteChainReply(bool listed)
 {
   if (listed) {
+    //
+    // Remember which candidate won, so the next visit to this place costs a
+    // single request instead of hunting again.
+    //
+
+    if (!m_chainPlaceName.isEmpty() && m_hostState != 0) {
+      m_hostState->setResolvedPlace(m_chainPlaceName.getString(),
+                                    m_chainCandidates.at(m_chainIndex).getString());
+    }
     endRemoteChain();
     return;
   }
@@ -991,6 +1019,162 @@ void FileTransferMainDialog::onRemoteChainReply(bool listed)
   insertMessageIntoComboBox(message.getString());
 
   endRemoteChain();
+}
+
+void FileTransferMainDialog::onPlacesButtonClick(bool remote)
+{
+  //
+  // Reread every time, so places edited in the registry show up without
+  // restarting the viewer.
+  //
+
+  FtPlaces *places = remote ? &m_remotePlaces : &m_localPlaces;
+  places->load();
+
+  Menu menu;
+  menu.createPopupMenu();
+
+  size_t count = places->getCount();
+
+  if (count == 0) {
+    //
+    // Command id zero is what a dismissed menu returns, so this entry is
+    // inert without needing to be greyed.
+    //
+
+    StringStorage empty(_T("(no places defined)"));
+    menu.appendMenu(empty, PLACES_MENU_NONE);
+  } else {
+    for (size_t i = 0; i < count; i++) {
+      menu.appendMenu(places->getPlace(i)->name,
+                      static_cast<UINT>(PLACES_MENU_FIRST_PLACE + i));
+    }
+  }
+
+  //
+  // Only remote resolutions are cached, so only that pane needs a rescan.
+  // Local hunting is a few file system calls and always runs fresh.
+  //
+
+  if (remote) {
+    StringStorage rescan(_T("Rescan"));
+    menu.appendSeparator();
+    menu.appendMenu(rescan, PLACES_MENU_RESCAN);
+  }
+
+  Control *button = remote ? &m_remotePlacesButton : &m_localPlacesButton;
+  RECT buttonRect;
+  GetWindowRect(button->getWindow(), &buttonRect);
+
+  int action = TrackPopupMenu(menu.getMenu(),
+                              TPM_NONOTIFY | TPM_RETURNCMD | TPM_LEFTALIGN,
+                              buttonRect.left, buttonRect.bottom,
+                              0, m_ctrlThis.getWindow(), NULL);
+
+  if (action == PLACES_MENU_NONE) {
+    return;
+  }
+  if (action == PLACES_MENU_RESCAN) {
+    rescanPlaces();
+    return;
+  }
+
+  size_t index = static_cast<size_t>(action - PLACES_MENU_FIRST_PLACE);
+  if (index >= places->getCount()) {
+    return;
+  }
+
+  if (remote) {
+    goToRemotePlace(places->getPlace(index));
+  } else {
+    goToLocalPlace(places->getPlace(index));
+  }
+}
+
+void FileTransferMainDialog::goToLocalPlace(const FtPlace *place)
+{
+  //
+  // Local resolution runs fresh every time. Checking a path costs a file
+  // system call, so caching would buy nothing and could only go stale.
+  //
+
+  for (size_t i = 0; i < place->candidates.size(); i++) {
+    const TCHAR *path = place->candidates.at(i).getString();
+
+    File candidate(path);
+    if (!candidate.exists() || !candidate.isDirectory()) {
+      continue;
+    }
+    if (tryListLocalFolder(path)) {
+      return;
+    }
+  }
+
+  StringStorage message;
+  message.format(_T("%s: no matching folder exists on this computer"),
+                 place->name.getString());
+  insertMessageIntoComboBox(message.getString());
+}
+
+void FileTransferMainDialog::goToRemotePlace(const FtPlace *place)
+{
+  vector<StringStorage> candidates;
+  StringStorage cached;
+
+  //
+  // A cached answer goes first rather than replacing the hunt. If the folder
+  // has since gone, the chain simply carries on into the real candidates and
+  // the stale entry is overwritten by whatever wins.
+  //
+
+  bool haveCached = m_hostState != 0 &&
+                    m_hostState->getResolvedPlace(place->name.getString(), &cached);
+
+  if (haveCached) {
+    candidates.push_back(cached);
+  }
+
+  for (size_t i = 0; i < place->candidates.size(); i++) {
+    if (haveCached && cached.isEqualTo(&place->candidates.at(i))) {
+      continue;
+    }
+    candidates.push_back(place->candidates.at(i));
+  }
+
+  startRemoteChain(&candidates,
+                   place->name.getString(),
+                   place->name.getString());
+}
+
+void FileTransferMainDialog::rescanPlaces()
+{
+  if (m_hostState == 0) {
+    insertMessageIntoComboBox(_T("No server name is known, so nothing is cached"));
+    return;
+  }
+
+  //
+  // Counted from the places defined now. RegistryKey cannot enumerate values,
+  // and an entry left over from a deleted place is not worth reporting even
+  // though clearing removes it too.
+  //
+
+  size_t cachedCount = 0;
+  StringStorage resolved;
+
+  for (size_t i = 0; i < m_remotePlaces.getCount(); i++) {
+    if (m_hostState->getResolvedPlace(m_remotePlaces.getPlace(i)->name.getString(),
+                                      &resolved)) {
+      cachedCount++;
+    }
+  }
+
+  m_hostState->clearResolvedPlaces();
+
+  StringStorage message;
+  message.format(_T("Cleared %u cached location(s) for this server"),
+                 static_cast<unsigned int>(cachedCount));
+  insertMessageIntoComboBox(message.getString());
 }
 
 void FileTransferMainDialog::getPathToCurrentLocalFolder(StringStorage *out)

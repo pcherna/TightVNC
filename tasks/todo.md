@@ -26,24 +26,32 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 - [x] Run the four phase 1 manual checks against a real server. All pass,
       including the fallback when a remembered remote folder is gone
 
-## Phase 2: named places
+## Phase 2a: named places, configured in the registry
 
-- [ ] `client-config-lib/FtPlaces.{h,cpp}` for the global place definitions
-- [ ] Local resolver, a synchronous `GetFileAttributes` loop
-- [ ] Remote resolver reusing the phase 1 chain, with the place name as the
-      chain description
-- [ ] Per-host resolved-answer cache in `FtHostState`, under an `FtResolved`
+- [x] `client-config-lib/FtPlaces.{h,cpp}` for the global place definitions
+- [x] Local resolver, a synchronous walk using `File::exists` and
+      `File::isDirectory`
+- [x] Remote resolver reusing the phase 1 chain, with the place name as both
+      the chain description and the cache key
+- [x] Per-host resolved-answer cache in `FtHostState`, under an `FtResolved`
       subkey
-- [ ] Places button per pane in `tvnviewer.rc`, growing the dialog by one
+- [x] Places button per pane in `tvnviewer.rc`, growing the dialog by one
       button row and shifting the log combo, progress bar, and Cancel down
-- [ ] Popup menu built at click time, `TPM_NONOTIFY | TPM_RETURNCMD`
-- [ ] Rescan: delete the connected host's `FtResolved` subkey, log the count,
+- [x] Popup menu built at click time, `TPM_NONOTIFY | TPM_RETURNCMD`
+- [x] Rescan: delete the connected host's `FtResolved` subkey, log the count,
       do not navigate
-- [ ] Edit Places modal dialog, names on the left and candidates on the right,
+- [x] Add the new files to both project formats
+- [ ] Build and run the phase 2a manual checks
+
+## Phase 2b: the Edit Places dialog
+
+- [ ] Modal dialog, names on the left and candidates on the right, with
       reorderable candidates
-- [ ] On OK, drop the edited places' cached answers across every host
-- [ ] Add the new files to both project formats
-- [ ] Build both solutions and run the phase 2 manual checks
+- [ ] `FtPlaces::save`
+- [ ] An Edit item in the Places menu, added only once it does something
+- [ ] On OK, drop the edited places' cached answers across every host, by
+      enumerating `History\*` with `getSubKeyNames`
+- [ ] Build and run the phase 2b manual checks
 
 ## Domain rules
 
@@ -57,8 +65,13 @@ Accreted as they surface. These are decisions, not guesses.
   allow reordering.
 - A miss writes one line to the log combo and leaves the pane where it was.
   Per-candidate failures are already logged by `RemoteFileListOperation`.
-- Resolved answers cache per host. Rescan clears every cached answer for the
-  connected host at once.
+- Resolved answers cache per host, but only for the remote pane. Local
+  resolution costs a few file system calls, so caching it would buy nothing
+  and could only go stale. The local menu therefore has no Rescan item.
+- A cached answer is used as the first candidate of the hunt rather than
+  replacing it. If the folder has gone, the chain carries on into the real
+  candidates and whatever wins overwrites the stale entry.
+- Rescan clears every cached answer for the connected host at once.
 - Editing a place's candidates drops that place's cached answers on all hosts.
   Other places keep theirs.
 - Places are global, not per host.

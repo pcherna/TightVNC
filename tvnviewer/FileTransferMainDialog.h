@@ -35,6 +35,7 @@
 #include "ft-common/FileInfo.h"
 
 #include "client-config-lib/FtHostState.h"
+#include "client-config-lib/FtPlaces.h"
 
 #include "io-lib/IOException.h"
 
@@ -131,6 +132,12 @@ protected:
 
   void onUploadButtonClick();
   void onDownloadButtonClick();
+
+  //
+  // Pops the menu of named places for one pane and acts on the choice.
+  //
+
+  void onPlacesButtonClick(bool remote) throw(IOException);
 
   void moveUpLocalFolder();
   void moveUpRemoteFolder() throw(IOException);
@@ -233,8 +240,15 @@ private:
   // ends it with a message in the combo box and leaves the pane alone.
   //
 
+  //
+  // placeName names the place being resolved, so that the winning path can
+  // be cached against the host when the chain succeeds. Pass null for a
+  // chain that is not resolving a place.
+  //
+
   void startRemoteChain(const vector<StringStorage> *candidates,
-                        const TCHAR *description) throw(IOException);
+                        const TCHAR *description,
+                        const TCHAR *placeName = 0) throw(IOException);
   void fireRemoteChainCandidate() throw(IOException);
   void onRemoteChainReply(bool listed) throw(IOException);
 
@@ -250,6 +264,25 @@ private:
   //
 
   bool isChainReplyExpected() const;
+
+  //
+  // Named places.
+  //
+  // Resolving a place means walking its candidate paths and taking the first
+  // that exists. Locally that is a few file system calls. Remotely each
+  // candidate costs a round trip, so it runs as a chain and the winning path
+  // is cached against the host.
+  //
+
+  void goToLocalPlace(const FtPlace *place);
+  void goToRemotePlace(const FtPlace *place) throw(IOException);
+
+  //
+  // Throws away this host's cached resolutions so every place hunts afresh.
+  // Reports how many went, counted from the places defined now.
+  //
+
+  void rescanPlaces();
 
   //
   // Filenames helper methods
@@ -295,6 +328,9 @@ protected:
 
   Control m_uploadButton;
   Control m_downloadButton;
+
+  Control m_localPlacesButton;
+  Control m_remotePlacesButton;
 
   Control m_cancelButton;
 
@@ -355,6 +391,12 @@ protected:
   StringStorage m_chainDescription;
 
   //
+  // Place this chain is resolving, empty when it is not resolving one.
+  //
+
+  StringStorage m_chainPlaceName;
+
+  //
   // Guards a reply from an abandoned chain against advancing a live one.
   //
   // m_chainGeneration is bumped whenever a chain starts or is cancelled, and
@@ -365,9 +407,31 @@ protected:
   UINT m_chainGeneration;
   UINT m_chainFiredGeneration;
 
+  //
+  // Place definitions for each pane. Global rather than per host, and
+  // reloaded each time a menu opens so registry edits take effect without
+  // restarting the viewer.
+  //
+
+  FtPlaces m_localPlaces;
+  FtPlaces m_remotePlaces;
+
 private:
 
   static const UINT WM_OPERATION_FINISHED = WM_USER + 2;
+
+  //
+  // Command ids used only inside the places popup menu.
+  //
+  // TrackPopupMenu is called with TPM_RETURNCMD, so these never reach the
+  // dialog's command handler and cannot collide with control ids. Zero means
+  // the menu was dismissed, which is also what the placeholder shown when no
+  // places exist returns.
+  //
+
+  static const UINT PLACES_MENU_NONE        = 0;
+  static const UINT PLACES_MENU_RESCAN      = 1;
+  static const UINT PLACES_MENU_FIRST_PLACE = 100;
 };
 
 #endif

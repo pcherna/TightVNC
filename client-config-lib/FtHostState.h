@@ -67,6 +67,24 @@ public:
   void setLastLocalFolder(const TCHAR *path);
   void setLastRemoteFolder(const TCHAR *path);
 
+  //
+  // Where a named place resolved to on this host.
+  //
+  // Resolving walks candidate paths, and on the remote side each one costs a
+  // round trip. The answer is stable once found, so it is kept here and
+  // reused. Returns false when this place has not been resolved yet.
+  //
+
+  bool getResolvedPlace(const TCHAR *placeName, StringStorage *out);
+  void setResolvedPlace(const TCHAR *placeName, const TCHAR *path);
+
+  //
+  // Throws away every cached resolution for this host, so the next use of
+  // each place hunts again. This is what the Rescan menu item does.
+  //
+
+  void clearResolvedPlaces();
+
 private:
   RegistryKey m_key;
 };

@@ -29,6 +29,14 @@
 static const TCHAR LAST_LOCAL_FOLDER_VALUE[]  = _T("FtLastLocalFolder");
 static const TCHAR LAST_REMOTE_FOLDER_VALUE[] = _T("FtLastRemoteFolder");
 
+//
+// Resolved places go in their own subkey, one value per place, so that
+// clearing them all is a single subtree delete and cannot disturb the
+// connection options stored alongside them.
+//
+
+static const TCHAR RESOLVED_PLACES_SUBKEY[]   = _T("FtResolved");
+
 FtHostState::FtHostState(const TCHAR *registryPath, const TCHAR *hostName)
 {
   StringStorage keyName;
@@ -59,4 +67,26 @@ void FtHostState::setLastLocalFolder(const TCHAR *path)
 void FtHostState::setLastRemoteFolder(const TCHAR *path)
 {
   m_key.setValueAsString(LAST_REMOTE_FOLDER_VALUE, path);
+}
+
+bool FtHostState::getResolvedPlace(const TCHAR *placeName, StringStorage *out)
+{
+  RegistryKey resolved(&m_key, RESOLVED_PLACES_SUBKEY, false);
+
+  if (!resolved.isOpened()) {
+    return false;
+  }
+  return resolved.getValueAsString(placeName, out);
+}
+
+void FtHostState::setResolvedPlace(const TCHAR *placeName, const TCHAR *path)
+{
+  RegistryKey resolved(&m_key, RESOLVED_PLACES_SUBKEY, true);
+
+  resolved.setValueAsString(placeName, path);
+}
+
+void FtHostState::clearResolvedPlaces()
+{
+  m_key.deleteSubKeyTree(RESOLVED_PLACES_SUBKEY);
 }

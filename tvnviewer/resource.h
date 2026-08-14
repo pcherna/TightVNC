@@ -104,6 +104,8 @@
 #define IDC_LOG_COMBO                   1029
 #define IDC_TOTAL_PROGRESS              1030
 #define IDC_CANCEL_BUTTON               1031
+#define IDC_LOCAL_PLACES_BUTTON         1093
+#define IDC_REMOTE_PLACES_BUTTON        1094
 #define IDC_SHELP                       1032
 #define IDC_CSHOWTOOLBARS               1033
 #define IDC_CWARNATSW                   1034
@@ -175,7 +177,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        232
 #define _APS_NEXT_COMMAND_VALUE         40010
-#define _APS_NEXT_CONTROL_VALUE         1093
+#define _APS_NEXT_CONTROL_VALUE         1095
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
