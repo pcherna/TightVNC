@@ -41,7 +41,7 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 - [x] Rescan: delete the connected host's `FtResolved` subkey, log the count,
       do not navigate
 - [x] Add the new files to both project formats
-- [ ] Build and run the phase 2a manual checks
+- [x] Build and run the phase 2a manual checks
 
 ## Phase 2b: the Edit Places dialog
 
@@ -52,7 +52,7 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 - [x] On OK, drop the edited places' cached answers across every host, by
       enumerating `History\*` with `getSubKeyNames`
 - [x] Add the new files to both project formats
-- [ ] Build and run the phase 2b manual checks
+- [x] Build and run the phase 2b manual checks
 
 ## Domain rules
 
