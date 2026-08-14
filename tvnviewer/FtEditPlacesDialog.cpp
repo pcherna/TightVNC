@@ -151,6 +151,17 @@ BOOL FtEditPlacesDialog::onCommand(UINT controlID, UINT notificationID)
       onCandidateSelectionChanged();
     }
     break;
+  case IDC_FTEP_PLACE_NAME:
+  case IDC_FTEP_CAND_PATH:
+    //
+    // Adding takes what is typed in the box beside the list, so the buttons
+    // have to follow the text as well as the selection.
+    //
+
+    if (notificationID == EN_CHANGE) {
+      updateButtons();
+    }
+    break;
   case IDC_FTEP_ADD_PLACE:
     onAddPlace();
     break;
@@ -278,10 +289,22 @@ void FtEditPlacesDialog::updateButtons()
     candidateCount = static_cast<int>(m_working.at(place).candidates.size());
   }
 
+  //
+  // Both Add buttons take their input from the box beside the list, so
+  // neither offers itself while that box is empty.
+  //
+
+  StringStorage typedName;
+  m_placeNameBox.getText(&typedName);
+
+  StringStorage typedPath;
+  m_candidatePathBox.getText(&typedPath);
+
+  m_addPlaceButton.setEnabled(!typedName.isEmpty());
   m_renamePlaceButton.setEnabled(havePlace);
   m_removePlaceButton.setEnabled(havePlace);
 
-  m_addCandidateButton.setEnabled(havePlace);
+  m_addCandidateButton.setEnabled(havePlace && !typedPath.isEmpty());
   m_replaceCandidateButton.setEnabled(haveCandidate);
   m_removeCandidateButton.setEnabled(haveCandidate);
   m_upCandidateButton.setEnabled(haveCandidate && candidate > 0);
@@ -315,10 +338,12 @@ void FtEditPlacesDialog::onAddPlace()
   StringStorage name;
   m_placeNameBox.getText(&name);
 
+  //
+  // The button is disabled while the box is empty, so this only guards
+  // against the two falling out of step.
+  //
+
   if (name.isEmpty()) {
-    MessageBox(m_ctrlThis.getWindow(),
-               _T("Type a name for the place first."),
-               _T("Edit Places"), MB_OK | MB_ICONINFORMATION);
     return;
   }
   if (nameIsTaken(name.getString(), -1)) {
