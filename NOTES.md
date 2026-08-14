@@ -125,14 +125,22 @@ system from scratch, and the result cannot be tested without Windows. Use a
 Windows VM with Visual Studio.
 
 Upstream targeted the `v141_xp` toolset and the Windows 8.1 SDK. Neither ships
-with Visual Studio 2026, so the projects now use plain `v141` and Windows SDK
-`10.0.26100.0`. Install the "MSVC v141 build tools" individual component
-alongside the C++ desktop workload.
+with Visual Studio 2026, so the projects now use plain `v141`. Install the
+"MSVC v141 build tools" individual component alongside the C++ desktop workload.
 
-The SDK version is pinned rather than set to the bare `10.0` shorthand. v141
-does not honour that shorthand and fails with "The Windows SDK version 10.0 was
-not found" even when an SDK is installed. Building on a machine with a different
-SDK means changing this value, which "Retarget solution" does.
+The Windows SDK version lives in `Directory.Build.props` at the repo root, which
+MSBuild imports into every project. Change it there, or override it per build
+with `msbuild /p:WindowsTargetPlatformVersion=<version>`. The default is
+`10.0.26100.0`.
+
+It has to be a full version number. The `10.0` shorthand meaning "latest
+installed" is not honoured by v141, which reports the SDK as missing even when
+one is installed.
+
+The platform toolset is still named in each project, 272 times across the 35
+of them. Anyone without v141 has to retarget, which Visual Studio offers on
+solution load. Moving it into `Directory.Build.props` alongside the SDK version
+would need each of those occurrences made conditional first.
 
 Stay on v141 rather than a newer toolset. The tree has 298 dynamic exception
 specifications across 81 files, which C++17 removed from the language. v141
