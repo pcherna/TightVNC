@@ -19,7 +19,11 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 - [x] Restore both panes on open, remote as a two-candidate chain
 - [x] Save each pane on successful navigation
 - [x] Add `FtHostState` to `client-config-lib.vcproj`, `.vcxproj`, `.filters`
-- [ ] Build both solutions on Windows and run the phase 1 manual checks
+- [x] Compile `tvnviewer` on Windows. Clean on the first attempt, with the
+      toolset and SDK retargeted
+- [ ] Confirm the build still works now that the SDK version moved into
+      `Directory.Build.props`
+- [ ] Run the four phase 1 manual checks against a real server
 
 ## Phase 2: named places
 
