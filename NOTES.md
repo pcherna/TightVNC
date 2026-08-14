@@ -119,7 +119,23 @@ Buttons only win if the preset list stays at three or four forever.
 
 ## Build environment
 
-The tree is MSVC only. 35 projects, `tightvnc.sln`, PlatformToolset `v141_xp`.
-No makefile, no CMake. Cross compiling from macOS is possible with llvm-mingw but
-means writing the build system from scratch, and the result cannot be tested
-without Windows. Use a Windows VM with Visual Studio.
+The tree is MSVC only. 35 projects, `tightvnc.sln`. No makefile, no CMake. Cross
+compiling from macOS is possible with llvm-mingw but means writing the build
+system from scratch, and the result cannot be tested without Windows. Use a
+Windows VM with Visual Studio.
+
+Upstream targeted the `v141_xp` toolset and the Windows 8.1 SDK. Neither ships
+with Visual Studio 2026, so the projects now use plain `v141` and let the SDK
+float to whatever is installed. Install the "MSVC v141 build tools" individual
+component alongside the C++ desktop workload.
+
+Stay on v141 rather than a newer toolset. The tree has 298 dynamic exception
+specifications across 81 files, which C++17 removed from the language. v141
+defaults to C++14, where they still compile.
+
+Build the `tvnviewer` project on its own, not the whole solution. It carries
+project references to all 17 libraries it needs. Building everything also pulls
+in `setup-helper`, which wants `wcautil.h` and `msi.lib` from the WiX v3 SDK.
+
+Output lands in `Debug\` or `Release\` at the repo root for Win32, and under
+`x64\` for 64 bit.
