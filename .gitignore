@@ -1,0 +1,38 @@
+# Visual Studio build output
+[Dd]ebug/
+[Dd]ebugNoUnicode/
+[Rr]elease/
+[Rr]eleaseNoUnicode/
+x64/
+Win32/
+*.obj
+*.o
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.idb
+*.tlog
+*.log
+*.res
+*.pch
+*.ipch
+
+# Visual Studio user/IDE state
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+*.aps
+*.ncb
+
+# WiX installer output
+*.wixobj
+*.wixpdb
+*.msi
+
+# macOS
+.DS_Store
