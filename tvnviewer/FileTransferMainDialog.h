@@ -197,11 +197,13 @@ private:
   // Displays file list of pathToFile folder of local machine
   // to local file list view.
   //
-  // Returns false if the folder could not be listed. The failure is written
-  // to the message combo box and the pane is left as it was.
+  // Returns false if the folder could not be listed, leaving the pane as it
+  // was. The failure is written to the message combo box as an error unless
+  // reportFailure is false, which callers walking a list of candidates use
+  // so that they can warn instead and carry on.
   //
 
-  bool tryListLocalFolder(const TCHAR *pathToFile);
+  bool tryListLocalFolder(const TCHAR *pathToFile, bool reportFailure = true);
 
   //
   // Sends file list request to server and shows result

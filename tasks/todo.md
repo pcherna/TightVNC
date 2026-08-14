@@ -63,8 +63,18 @@ Accreted as they surface. These are decisions, not guesses.
   changing drive letters. Plain existence testing is enough.
 - First candidate that exists wins. Order is significant, so the editor must
   allow reordering.
-- A miss writes one line to the log combo and leaves the pane where it was.
-  Per-candidate failures are already logged by `RemoteFileListOperation`.
+- A candidate that fails is a warning, not an error, because a later one may
+  still work. Each failed candidate writes `Warning: <path> not found ...`.
+  Only once every candidate has failed does the place raise a single
+  `Error: no folder found ... for <place name>`, naming the place rather than
+  any one path.
+- `RemoteFileListOperation` writes its own error on a failed listing, which is
+  right for a folder the user asked for directly and wrong mid-hunt. The
+  dialog suppresses it while a chain is running and warns itself instead.
+- A miss leaves the pane where it was.
+- Candidate paths may be written with either slash. Loading rewrites them to
+  the separator the pane uses, forward for remote and backward for local, so
+  whoever edits the registry need not remember which side wants which.
 - Resolved answers cache per host, but only for the remote pane. Local
   resolution costs a few file system calls, so caching it would buy nothing
   and could only go stale. The local menu therefore has no Rescan item.

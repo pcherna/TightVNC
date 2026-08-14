@@ -64,6 +64,11 @@ struct FtPlace
 // Reading a place stops at the first gap in the numbering. Places come back
 // in registry enumeration order, which is alphabetical by name.
 //
+// Candidates may be written with either slash. Loading rewrites them to the
+// separator the pane actually uses, forward for remote and backward for
+// local, so whoever edits the registry does not have to remember which side
+// wants which.
+//
 
 class FtPlaces
 {
@@ -98,6 +103,7 @@ public:
 private:
   RegistryKey m_key;
   vector<FtPlace> m_places;
+  bool m_remote;
 
   //
   // Stops a runaway read if the registry holds something unexpected. No real

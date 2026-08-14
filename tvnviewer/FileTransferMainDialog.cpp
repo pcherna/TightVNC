@@ -846,7 +846,8 @@ void FileTransferMainDialog::refreshLocalFileList()
   tryListLocalFolder(pathToFile.getString());
 }
 
-bool FileTransferMainDialog::tryListLocalFolder(const TCHAR *pathToFile)
+bool FileTransferMainDialog::tryListLocalFolder(const TCHAR *pathToFile,
+                                                bool reportFailure)
 {
   try {
     vector <FileInfo> *localFileList = m_ftCore->getListLocalFolder(pathToFile);
@@ -876,12 +877,14 @@ bool FileTransferMainDialog::tryListLocalFolder(const TCHAR *pathToFile)
     }
 
   } catch (...) {
-    StringStorage message;
+    if (reportFailure) {
+      StringStorage message;
 
-    message.format(_T("Error: failed to get file list in local folder '%s'"),
-                   pathToFile);
+      message.format(_T("Error: failed to get file list in local folder '%s'"),
+                     pathToFile);
 
-    insertMessageIntoComboBox(message.getString());
+      insertMessageIntoComboBox(message.getString());
+    }
     return false;
   }
   return true;
@@ -911,9 +914,14 @@ void FileTransferMainDialog::restoreLocalFolder()
   StringStorage saved;
 
   if (m_hostState != 0 && m_hostState->getLastLocalFolder(&saved)) {
-    if (tryListLocalFolder(saved.getString())) {
+    if (tryListLocalFolder(saved.getString(), false)) {
       return;
     }
+
+    StringStorage warning;
+    warning.format(_T("Warning: %s not found on this computer"),
+                   saved.getString());
+    insertMessageIntoComboBox(warning.getString());
   }
   tryListLocalFolder(_T(""));
 }
@@ -935,7 +943,7 @@ void FileTransferMainDialog::restoreRemoteFolder()
   }
   candidates.push_back(StringStorage(_T("/")));
 
-  startRemoteChain(&candidates, _T("Remembered folder"));
+  startRemoteChain(&candidates, _T("the remembered folder"));
 }
 
 void FileTransferMainDialog::startRemoteChain(const vector<StringStorage> *candidates,
@@ -1002,10 +1010,10 @@ void FileTransferMainDialog::onRemoteChainReply(bool listed)
     return;
   }
 
-  //
-  // RemoteFileListOperation has already logged this candidate's failure, so
-  // only the exhausted case needs a message of its own.
-  //
+  StringStorage warning;
+  warning.format(_T("Warning: %s not found on the server"),
+                 m_chainCandidates.at(m_chainIndex).getString());
+  insertMessageIntoComboBox(warning.getString());
 
   m_chainIndex++;
   if (m_chainIndex < m_chainCandidates.size()) {
@@ -1014,7 +1022,7 @@ void FileTransferMainDialog::onRemoteChainReply(bool listed)
   }
 
   StringStorage message;
-  message.format(_T("%s: no matching folder exists on the server"),
+  message.format(_T("Error: no folder found on the server for %s"),
                  m_chainDescription.getString());
   insertMessageIntoComboBox(message.getString());
 
@@ -1102,16 +1110,24 @@ void FileTransferMainDialog::goToLocalPlace(const FtPlace *place)
     const TCHAR *path = place->candidates.at(i).getString();
 
     File candidate(path);
-    if (!candidate.exists() || !candidate.isDirectory()) {
-      continue;
+    if (candidate.exists() && candidate.isDirectory()) {
+      if (tryListLocalFolder(path, false)) {
+        return;
+      }
     }
-    if (tryListLocalFolder(path)) {
-      return;
-    }
+
+    //
+    // A candidate that is missing, or that exists but will not list, is only
+    // a warning while others remain to be tried.
+    //
+
+    StringStorage warning;
+    warning.format(_T("Warning: %s not found on this computer"), path);
+    insertMessageIntoComboBox(warning.getString());
   }
 
   StringStorage message;
-  message.format(_T("%s: no matching folder exists on this computer"),
+  message.format(_T("Error: no folder found on this computer for %s"),
                  place->name.getString());
   insertMessageIntoComboBox(message.getString());
 }
@@ -1274,6 +1290,15 @@ void FileTransferMainDialog::setNothingState()
 
 void FileTransferMainDialog::onFtOpError(const TCHAR *message)
 {
+  //
+  // A candidate failing part way through a chain is not an error, because a
+  // later candidate may still work. The chain reports each one as a warning
+  // itself, and raises a single error only once every candidate has failed.
+  //
+
+  if (isChainReplyExpected()) {
+    return;
+  }
   insertMessageIntoComboBox(message);
 }
 

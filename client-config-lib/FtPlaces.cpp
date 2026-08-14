@@ -26,7 +26,32 @@
 
 #include "win-system/Registry.h"
 
+//
+// Rewrites every path separator to the one the pane uses, so that a
+// hand-edited registry entry works whichever slash was typed.
+//
+
+static void normalizeSeparators(const StringStorage *in, bool remote,
+                                StringStorage *out)
+{
+  const TCHAR wanted = remote ? _T('/') : _T('\\');
+  const TCHAR *chars = in->getString();
+  size_t length = in->getLength();
+
+  out->setString(_T(""));
+
+  for (size_t i = 0; i < length; i++) {
+    TCHAR c = chars[i];
+
+    if (c == _T('/') || c == _T('\\')) {
+      c = wanted;
+    }
+    out->appendChar(c);
+  }
+}
+
 FtPlaces::FtPlaces(const TCHAR *registryPath, bool remote)
+: m_remote(remote)
 {
   StringStorage keyName;
   keyName.format(_T("%s\\FtPlaces\\%s"),
@@ -65,13 +90,15 @@ void FtPlaces::load()
 
     StringStorage valueName;
     StringStorage candidate;
+    StringStorage normalized;
 
     for (size_t c = 0; c < MAX_CANDIDATES; c++) {
       valueName.format(_T("%u"), (unsigned int)c);
       if (!placeKey.getValueAsString(valueName.getString(), &candidate)) {
         break;
       }
-      place.candidates.push_back(candidate);
+      normalizeSeparators(&candidate, m_remote, &normalized);
+      place.candidates.push_back(normalized);
     }
 
     if (!place.candidates.empty()) {
