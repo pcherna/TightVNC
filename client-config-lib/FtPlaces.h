@@ -92,6 +92,16 @@ public:
 
   void load();
 
+  //
+  // Replaces everything stored for this side with the given list, then
+  // rereads it.
+  //
+  // Existing definitions are removed first, so a place dropped from the list
+  // disappears from the registry and no stale candidate numbering survives.
+  //
+
+  void save(const vector<FtPlace> *places);
+
   size_t getCount() const;
 
   //
@@ -99,6 +109,23 @@ public:
   //
 
   const FtPlace *getPlace(size_t index) const;
+
+  //
+  // Copies the places out for editing.
+  //
+
+  void copyTo(vector<FtPlace> *out) const;
+
+  //
+  // Rewrites every path separator to the one the given side uses, forward
+  // for remote and backward for local.
+  //
+  // Exposed so that an editor can normalise what someone types at the point
+  // they type it, rather than leaving it to look different after a reload.
+  //
+
+  static void normalizePath(const StringStorage *in, bool remote,
+                            StringStorage *out);
 
 private:
   RegistryKey m_key;

@@ -45,12 +45,13 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 
 ## Phase 2b: the Edit Places dialog
 
-- [ ] Modal dialog, names on the left and candidates on the right, with
+- [x] Modal dialog, names on the left and candidates on the right, with
       reorderable candidates
-- [ ] `FtPlaces::save`
-- [ ] An Edit item in the Places menu, added only once it does something
-- [ ] On OK, drop the edited places' cached answers across every host, by
+- [x] `FtPlaces::save`, plus `copyTo` for taking a working copy
+- [x] An Edit Places item in both Places menus
+- [x] On OK, drop the edited places' cached answers across every host, by
       enumerating `History\*` with `getSubKeyNames`
+- [x] Add the new files to both project formats
 - [ ] Build and run the phase 2b manual checks
 
 ## Domain rules
@@ -89,6 +90,14 @@ Accreted as they surface. These are decisions, not guesses.
   `.listen`, so per-host state is meaningless there.
 - An empty string is a valid saved local folder. It is the "My Computer" root,
   so empty must not be read as unset.
+- The editor writes nothing until OK, so Cancel leaves the registry untouched.
+- Saving rewrites a side's definitions wholesale rather than merging, so a
+  removed place disappears and no stale candidate numbering survives.
+- A place with no candidates is not written. It could never resolve.
+- `StringStorage::operator =` returns void, so it is not assignable in the
+  sense the standard containers ask for. Anything that would shift elements by
+  assignment, `vector::erase` and whole-vector assignment both, is written as
+  a rebuild through copy construction instead.
 
 ## Review
 

@@ -433,6 +433,7 @@ private:
 
   static const UINT PLACES_MENU_NONE        = 0;
   static const UINT PLACES_MENU_RESCAN      = 1;
+  static const UINT PLACES_MENU_EDIT        = 2;
   static const UINT PLACES_MENU_FIRST_PLACE = 100;
 };
 

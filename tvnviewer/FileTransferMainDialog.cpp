@@ -28,6 +28,7 @@
 #include "util/winhdr.h"
 #include "NewFolderDialog.h"
 #include "FileRenameDialog.h"
+#include "FtEditPlacesDialog.h"
 
 #include "file-lib/File.h"
 
@@ -1059,6 +1060,8 @@ void FileTransferMainDialog::onPlacesButtonClick(bool remote)
     }
   }
 
+  menu.appendSeparator();
+
   //
   // Only remote resolutions are cached, so only that pane needs a rescan.
   // Local hunting is a few file system calls and always runs fresh.
@@ -1066,9 +1069,11 @@ void FileTransferMainDialog::onPlacesButtonClick(bool remote)
 
   if (remote) {
     StringStorage rescan(_T("Rescan"));
-    menu.appendSeparator();
     menu.appendMenu(rescan, PLACES_MENU_RESCAN);
   }
+
+  StringStorage edit(_T("Edit Places..."));
+  menu.appendMenu(edit, PLACES_MENU_EDIT);
 
   Control *button = remote ? &m_remotePlacesButton : &m_localPlacesButton;
   RECT buttonRect;
@@ -1084,6 +1089,14 @@ void FileTransferMainDialog::onPlacesButtonClick(bool remote)
   }
   if (action == PLACES_MENU_RESCAN) {
     rescanPlaces();
+    return;
+  }
+  if (action == PLACES_MENU_EDIT) {
+    FtEditPlacesDialog editor(&m_ctrlThis, remote);
+
+    if (editor.showModal() == IDOK) {
+      places->load();
+    }
     return;
   }
 

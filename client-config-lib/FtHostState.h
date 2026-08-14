@@ -85,6 +85,18 @@ public:
 
   void clearResolvedPlaces();
 
+  //
+  // Drops one place's cached resolution from every host.
+  //
+  // Used when a place's candidates change. An answer found under the old
+  // list may no longer be the one the new list would pick, and the machines
+  // most likely to be wrong are exactly the ones already resolved, so the
+  // edit has to reach all of them rather than only hosts never visited.
+  //
+
+  static void forgetPlaceEverywhere(const TCHAR *registryPath,
+                                    const TCHAR *placeName);
+
 private:
   RegistryKey m_key;
 };

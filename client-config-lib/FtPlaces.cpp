@@ -26,13 +26,8 @@
 
 #include "win-system/Registry.h"
 
-//
-// Rewrites every path separator to the one the pane uses, so that a
-// hand-edited registry entry works whichever slash was typed.
-//
-
-static void normalizeSeparators(const StringStorage *in, bool remote,
-                                StringStorage *out)
+void FtPlaces::normalizePath(const StringStorage *in, bool remote,
+                             StringStorage *out)
 {
   const TCHAR wanted = remote ? _T('/') : _T('\\');
   const TCHAR *chars = in->getString();
@@ -97,7 +92,7 @@ void FtPlaces::load()
       if (!placeKey.getValueAsString(valueName.getString(), &candidate)) {
         break;
       }
-      normalizeSeparators(&candidate, m_remote, &normalized);
+      normalizePath(&candidate, m_remote, &normalized);
       place.candidates.push_back(normalized);
     }
 
@@ -107,9 +102,61 @@ void FtPlaces::load()
   }
 }
 
+void FtPlaces::save(const vector<FtPlace> *places)
+{
+  //
+  // Every definition is removed and rewritten rather than merged. Merging
+  // would have to notice candidates deleted from the end of a list, and the
+  // whole set is small enough that rewriting costs nothing.
+  //
+
+  size_t existingCount = 0;
+  if (m_key.getSubKeyNames(0, &existingCount) && existingCount > 0) {
+    vector<StringStorage> existing(existingCount);
+
+    if (m_key.getSubKeyNames(&existing.front(), 0)) {
+      for (size_t i = 0; i < existingCount; i++) {
+        m_key.deleteSubKeyTree(existing[i].getString());
+      }
+    }
+  }
+
+  StringStorage valueName;
+
+  for (size_t i = 0; i < places->size(); i++) {
+    const FtPlace *place = &places->at(i);
+
+    if (place->name.isEmpty() || place->candidates.empty()) {
+      continue;
+    }
+
+    RegistryKey placeKey(&m_key, place->name.getString(), true);
+    if (!placeKey.isOpened()) {
+      continue;
+    }
+
+    for (size_t c = 0; c < place->candidates.size(); c++) {
+      valueName.format(_T("%u"), (unsigned int)c);
+      placeKey.setValueAsString(valueName.getString(),
+                                place->candidates.at(c).getString());
+    }
+  }
+
+  load();
+}
+
 size_t FtPlaces::getCount() const
 {
   return m_places.size();
+}
+
+void FtPlaces::copyTo(vector<FtPlace> *out) const
+{
+  out->clear();
+
+  for (size_t i = 0; i < m_places.size(); i++) {
+    out->push_back(m_places.at(i));
+  }
 }
 
 const FtPlace *FtPlaces::getPlace(size_t index) const

@@ -26,6 +26,8 @@
 
 #include "win-system/Registry.h"
 
+#include <vector>
+
 static const TCHAR LAST_LOCAL_FOLDER_VALUE[]  = _T("FtLastLocalFolder");
 static const TCHAR LAST_REMOTE_FOLDER_VALUE[] = _T("FtLastRemoteFolder");
 
@@ -89,4 +91,40 @@ void FtHostState::setResolvedPlace(const TCHAR *placeName, const TCHAR *path)
 void FtHostState::clearResolvedPlaces()
 {
   m_key.deleteSubKeyTree(RESOLVED_PLACES_SUBKEY);
+}
+
+void FtHostState::forgetPlaceEverywhere(const TCHAR *registryPath,
+                                        const TCHAR *placeName)
+{
+  StringStorage historyPath;
+  historyPath.format(_T("%s\\History"), registryPath);
+
+  RegistryKey history(Registry::getCurrentUserKey(),
+                      historyPath.getString(), false);
+  if (!history.isOpened()) {
+    return;
+  }
+
+  size_t hostCount = 0;
+  if (!history.getSubKeyNames(0, &hostCount) || hostCount == 0) {
+    return;
+  }
+
+  std::vector<StringStorage> hosts(hostCount);
+  if (!history.getSubKeyNames(&hosts.front(), 0)) {
+    return;
+  }
+
+  for (size_t i = 0; i < hostCount; i++) {
+    RegistryKey hostKey(&history, hosts[i].getString(), false);
+    if (!hostKey.isOpened()) {
+      continue;
+    }
+
+    RegistryKey resolved(&hostKey, RESOLVED_PLACES_SUBKEY, false);
+    if (!resolved.isOpened()) {
+      continue;
+    }
+    resolved.deleteValue(placeName);
+  }
 }
