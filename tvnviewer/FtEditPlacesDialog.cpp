@@ -290,8 +290,8 @@ void FtEditPlacesDialog::updateButtons()
   }
 
   //
-  // Both Add buttons take their input from the box beside the list, so
-  // neither offers itself while that box is empty.
+  // Add, Rename and Replace all take their input from the box beside the
+  // list, so none of them offers itself while that box is empty.
   //
 
   StringStorage typedName;
@@ -300,12 +300,15 @@ void FtEditPlacesDialog::updateButtons()
   StringStorage typedPath;
   m_candidatePathBox.getText(&typedPath);
 
-  m_addPlaceButton.setEnabled(!typedName.isEmpty());
-  m_renamePlaceButton.setEnabled(havePlace);
+  bool haveName = !typedName.isEmpty();
+  bool havePath = !typedPath.isEmpty();
+
+  m_addPlaceButton.setEnabled(haveName);
+  m_renamePlaceButton.setEnabled(havePlace && haveName);
   m_removePlaceButton.setEnabled(havePlace);
 
-  m_addCandidateButton.setEnabled(havePlace && !typedPath.isEmpty());
-  m_replaceCandidateButton.setEnabled(haveCandidate);
+  m_addCandidateButton.setEnabled(havePlace && havePath);
+  m_replaceCandidateButton.setEnabled(haveCandidate && havePath);
   m_removeCandidateButton.setEnabled(haveCandidate);
   m_upCandidateButton.setEnabled(haveCandidate && candidate > 0);
   m_downCandidateButton.setEnabled(haveCandidate &&
@@ -370,6 +373,11 @@ void FtEditPlacesDialog::onRenamePlace()
   StringStorage name;
   m_placeNameBox.getText(&name);
 
+  //
+  // The button is disabled while the box is empty, so this only guards
+  // against the two falling out of step.
+  //
+
   if (name.isEmpty()) {
     return;
   }
@@ -428,6 +436,11 @@ void FtEditPlacesDialog::onReplaceCandidate()
 
   StringStorage path;
   getCandidateInput(&path);
+
+  //
+  // The button is disabled while the box is empty, so this only guards
+  // against the two falling out of step.
+  //
 
   if (path.isEmpty()) {
     return;
