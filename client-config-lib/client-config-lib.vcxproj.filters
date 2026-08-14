@@ -17,6 +17,9 @@
     <ClCompile Include="ConnectionConfigSM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FtHostState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="ViewerConfig.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -29,6 +32,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ConnectionConfigSM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FtHostState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ViewerConfig.h">

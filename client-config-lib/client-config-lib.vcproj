@@ -541,6 +541,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\FtHostState.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ViewerConfig.cpp"
 				>
 			</File>
@@ -560,6 +564,10 @@
 			</File>
 			<File
 				RelativePath=".\ConnectionConfigSM.h"
+				>
+			</File>
+			<File
+				RelativePath=".\FtHostState.h"
 				>
 			</File>
 			<File

@@ -31,16 +31,27 @@
 
 #include "file-lib/File.h"
 
+#include "NamingDefs.h"
 #include "resource.h"
 #include <stdio.h>
 
-FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core)
-: FileTransferInterface(core)
+FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core,
+                                               const TCHAR *hostName)
+: FileTransferInterface(core),
+  m_hostState(0),
+  m_chainIndex(0),
+  m_chainActive(false),
+  m_chainGeneration(0),
+  m_chainFiredGeneration(0)
 {
   setResourceId(ftclient_mainDialog);
 
   m_lastSentFileListPath.setString(_T(""));
   m_lastReceivedFileListPath.setString(_T(""));
+
+  if (hostName != 0 && hostName[0] != _T('\0')) {
+    m_hostState = new FtHostState(RegistryPaths::VIEWER_PATH, hostName);
+  }
 
   m_fakeMoveUpFolder = new FileInfo(0, 0, FileInfo::DIRECTORY, _T(".."));
 }
@@ -48,6 +59,7 @@ FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core)
 FileTransferMainDialog::~FileTransferMainDialog()
 {
   delete m_fakeMoveUpFolder;
+  delete m_hostState;
 }
 
 void FileTransferMainDialog::setProgress(double progress)
@@ -86,8 +98,8 @@ BOOL FileTransferMainDialog::onInitDialog()
 
   initControls();
 
-  tryListRemoteFolder(_T("/"));
-  tryListLocalFolder(_T(""));
+  restoreRemoteFolder();
+  restoreLocalFolder();
 
   return TRUE;
 }
@@ -213,8 +225,18 @@ void FileTransferMainDialog::onMessageReceived(UINT uMsg, WPARAM wParam, LPARAM 
       int result = static_cast<int>(lParam);
       m_ftCore->onUpdateState(state, result);
 
+      //
+      // A candidate chain spans one operation per candidate, so the controls
+      // must stay disabled until the whole chain settles rather than being
+      // re-enabled between candidates.
+      //
+
+      if (state == FileTransferCore::FILE_LIST_STATE && isChainReplyExpected()) {
+        onRemoteChainReply(result != 0);
+      }
+
       setProgress(0.0);
-      enableControls(true);
+      enableControls(!m_chainActive);
       break;
     } else { // If window is closing we can it only if operation finished
       kill(0);
@@ -604,7 +626,7 @@ void FileTransferMainDialog::moveUpRemoteFolder()
 {
   StringStorage parent;
   getPathToParentRemoteFolder(&parent);
-  tryListRemoteFolder(parent.getString());
+  navigateRemoteFolder(parent.getString());
 }
 
 void FileTransferMainDialog::onRemoteListViewDoubleClick()
@@ -628,7 +650,7 @@ void FileTransferMainDialog::onRemoteListViewDoubleClick()
   }
   StringStorage pathToFile;
   getPathToSelectedRemoteFile(&pathToFile);
-  tryListRemoteFolder(pathToFile.getString());
+  navigateRemoteFolder(pathToFile.getString());
 }
 
 void FileTransferMainDialog::onLocalListViewDoubleClick()
@@ -808,7 +830,7 @@ void FileTransferMainDialog::refreshLocalFileList()
   tryListLocalFolder(pathToFile.getString());
 }
 
-void FileTransferMainDialog::tryListLocalFolder(const TCHAR *pathToFile)
+bool FileTransferMainDialog::tryListLocalFolder(const TCHAR *pathToFile)
 {
   try {
     vector <FileInfo> *localFileList = m_ftCore->getListLocalFolder(pathToFile);
@@ -833,6 +855,10 @@ void FileTransferMainDialog::tryListLocalFolder(const TCHAR *pathToFile)
     // Enable or disable mkdir button depending on isRoot flag
     m_mkDirLocalButton.setEnabled(!isRoot);
 
+    if (m_hostState != 0) {
+      m_hostState->setLastLocalFolder(pathToFile);
+    }
+
   } catch (...) {
     StringStorage message;
 
@@ -840,21 +866,131 @@ void FileTransferMainDialog::tryListLocalFolder(const TCHAR *pathToFile)
                    pathToFile);
 
     insertMessageIntoComboBox(message.getString());
-    return;
+    return false;
   }
+  return true;
 }
 
 void FileTransferMainDialog::refreshRemoteFileList()
 {
   StringStorage currentFolder;
   m_remoteCurFolderTextBox.getText(&currentFolder);
-  tryListRemoteFolder(currentFolder.getString());
+  navigateRemoteFolder(currentFolder.getString());
 }
 
 void FileTransferMainDialog::tryListRemoteFolder(const TCHAR *pathToFile)
 {
   m_lastSentFileListPath.setString(pathToFile);
   m_ftCore->remoteFileListOperation(pathToFile);
+}
+
+void FileTransferMainDialog::navigateRemoteFolder(const TCHAR *pathToFile)
+{
+  endRemoteChain();
+  tryListRemoteFolder(pathToFile);
+}
+
+void FileTransferMainDialog::restoreLocalFolder()
+{
+  StringStorage saved;
+
+  if (m_hostState != 0 && m_hostState->getLastLocalFolder(&saved)) {
+    if (tryListLocalFolder(saved.getString())) {
+      return;
+    }
+  }
+  tryListLocalFolder(_T(""));
+}
+
+void FileTransferMainDialog::restoreRemoteFolder()
+{
+  vector<StringStorage> candidates;
+  StringStorage saved;
+
+  //
+  // The remembered folder can be gone, so the server root is the fallback.
+  // Skip the duplicate when the remembered folder is the root already.
+  //
+
+  if (m_hostState != 0 &&
+      m_hostState->getLastRemoteFolder(&saved) &&
+      !saved.isEqualTo(_T("/"))) {
+    candidates.push_back(saved);
+  }
+  candidates.push_back(StringStorage(_T("/")));
+
+  startRemoteChain(&candidates, _T("Remembered folder"));
+}
+
+void FileTransferMainDialog::startRemoteChain(const vector<StringStorage> *candidates,
+                                              const TCHAR *description)
+{
+  //
+  // Copied element by element rather than by vector assignment, because
+  // StringStorage::operator = returns void and so is not assignable in the
+  // sense the standard containers ask for.
+  //
+
+  m_chainCandidates.clear();
+  for (size_t i = 0; i < candidates->size(); i++) {
+    m_chainCandidates.push_back(candidates->at(i));
+  }
+
+  m_chainIndex = 0;
+  m_chainActive = false;
+  m_chainDescription.setString(description);
+  m_chainGeneration++;
+
+  if (m_chainCandidates.empty()) {
+    return;
+  }
+
+  m_chainActive = true;
+  fireRemoteChainCandidate();
+}
+
+void FileTransferMainDialog::fireRemoteChainCandidate()
+{
+  m_chainFiredGeneration = m_chainGeneration;
+  tryListRemoteFolder(m_chainCandidates.at(m_chainIndex).getString());
+}
+
+void FileTransferMainDialog::endRemoteChain()
+{
+  m_chainActive = false;
+  m_chainCandidates.clear();
+  m_chainGeneration++;
+}
+
+bool FileTransferMainDialog::isChainReplyExpected() const
+{
+  return m_chainActive && (m_chainFiredGeneration == m_chainGeneration);
+}
+
+void FileTransferMainDialog::onRemoteChainReply(bool listed)
+{
+  if (listed) {
+    endRemoteChain();
+    return;
+  }
+
+  //
+  // RemoteFileListOperation has already logged this candidate's failure, so
+  // only the exhausted case needs a message of its own.
+  //
+
+  m_chainIndex++;
+  if (m_chainIndex < m_chainCandidates.size()) {
+    fireRemoteChainCandidate();
+    return;
+  }
+
+  StringStorage message;
+  message.format(_T("%s: no matching folder exists on the server"),
+                 m_chainDescription.getString());
+  insertMessageIntoComboBox(message.getString());
+
+  endRemoteChain();
 }
 
 void FileTransferMainDialog::getPathToCurrentLocalFolder(StringStorage *out)
@@ -927,6 +1063,15 @@ void FileTransferMainDialog::setNothingState()
 {
   m_lastReceivedFileListPath = m_lastSentFileListPath;
   m_remoteCurFolderTextBox.setText(m_lastReceivedFileListPath.getString());
+
+  //
+  // Only successful listings reach here. FileTransferCore::onUpdateState
+  // skips this call when the file list request failed.
+  //
+
+  if (m_hostState != 0) {
+    m_hostState->setLastRemoteFolder(m_lastReceivedFileListPath.getString());
+  }
 
   m_remoteFileListView.clear();
   vector<FileInfo> *fileRemoteList = m_ftCore->getListRemoteFolder();

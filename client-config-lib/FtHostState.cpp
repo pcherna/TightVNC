@@ -1,0 +1,62 @@
+// Copyright (C) 2026 Peter Cherna.
+// All rights reserved.
+//
+//-------------------------------------------------------------------------
+// This file is part of the TightVNC software.  Please visit our Web site:
+//
+//                       http://www.tightvnc.com/
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+//-------------------------------------------------------------------------
+//
+
+#include "FtHostState.h"
+
+#include "win-system/Registry.h"
+
+static const TCHAR LAST_LOCAL_FOLDER_VALUE[]  = _T("FtLastLocalFolder");
+static const TCHAR LAST_REMOTE_FOLDER_VALUE[] = _T("FtLastRemoteFolder");
+
+FtHostState::FtHostState(const TCHAR *registryPath, const TCHAR *hostName)
+{
+  StringStorage keyName;
+  keyName.format(_T("%s\\History\\%s"), registryPath, hostName);
+
+  m_key.open(Registry::getCurrentUserKey(), keyName.getString());
+}
+
+FtHostState::~FtHostState()
+{
+}
+
+bool FtHostState::getLastLocalFolder(StringStorage *out)
+{
+  return m_key.getValueAsString(LAST_LOCAL_FOLDER_VALUE, out);
+}
+
+bool FtHostState::getLastRemoteFolder(StringStorage *out)
+{
+  return m_key.getValueAsString(LAST_REMOTE_FOLDER_VALUE, out);
+}
+
+void FtHostState::setLastLocalFolder(const TCHAR *path)
+{
+  m_key.setValueAsString(LAST_LOCAL_FOLDER_VALUE, path);
+}
+
+void FtHostState::setLastRemoteFolder(const TCHAR *path)
+{
+  m_key.setValueAsString(LAST_REMOTE_FOLDER_VALUE, path);
+}

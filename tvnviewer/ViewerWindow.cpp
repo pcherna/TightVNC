@@ -773,7 +773,8 @@ void ViewerWindow::showFileTransferDialog()
     }
     if (m_ftDialog == 0) {
       _ASSERT(m_fileTransfer != 0);
-      m_ftDialog = new FileTransferMainDialog(m_fileTransfer->getCore());
+      m_ftDialog = new FileTransferMainDialog(m_fileTransfer->getCore(),
+                                              m_conData->getHost().getString());
       m_fileTransfer->setInterface(m_ftDialog);
     }
     m_ftDialog->show();

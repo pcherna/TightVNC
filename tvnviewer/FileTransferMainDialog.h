@@ -34,6 +34,8 @@
 
 #include "ft-common/FileInfo.h"
 
+#include "client-config-lib/FtHostState.h"
+
 #include "io-lib/IOException.h"
 
 #include "FileInfoListView.h"
@@ -49,7 +51,14 @@ class FileTransferMainDialog : public BaseDialog,
                                public FileTransferInterface
 {
 public:
-  FileTransferMainDialog(FileTransferCore *core);
+  //
+  // Parameters:
+  // core - file transfer core driving the operations.
+  // hostName - server host as the user typed it, used to key the remembered
+  //            folders. May be empty, in which case nothing is remembered.
+  //
+
+  FileTransferMainDialog(FileTransferCore *core, const TCHAR *hostName);
   virtual ~FileTransferMainDialog();
 
   //
@@ -179,10 +188,13 @@ private:
 
   //
   // Displays file list of pathToFile folder of local machine
-  // to local file list view
+  // to local file list view.
+  //
+  // Returns false if the folder could not be listed. The failure is written
+  // to the message combo box and the pane is left as it was.
   //
 
-  void tryListLocalFolder(const TCHAR *pathToFile);
+  bool tryListLocalFolder(const TCHAR *pathToFile);
 
   //
   // Sends file list request to server and shows result
@@ -190,6 +202,54 @@ private:
   //
 
   void tryListRemoteFolder(const TCHAR *pathToFile) throw(IOException);
+
+  //
+  // Sends a file list request on the user's behalf.
+  //
+  // Cancels any running candidate chain first, so that a reply still in
+  // flight cannot move the pane after the user has navigated elsewhere.
+  //
+
+  void navigateRemoteFolder(const TCHAR *pathToFile) throw(IOException);
+
+  //
+  // Returns each pane to the folder it was showing the last time this host
+  // was used, falling back to the pane's root.
+  //
+
+  void restoreLocalFolder();
+  void restoreRemoteFolder() throw(IOException);
+
+  //
+  // Remote candidate chain.
+  //
+  // Remote listing is asynchronous. tryListRemoteFolder sends a request and
+  // returns, and the reply arrives later through onFtOpFinished. So trying
+  // several paths until one works cannot be a loop. It is a small state
+  // machine driven by those replies.
+  //
+  // startRemoteChain sends the first candidate. Every failed reply advances
+  // to the next. The first success ends the chain. Running out of candidates
+  // ends it with a message in the combo box and leaves the pane alone.
+  //
+
+  void startRemoteChain(const vector<StringStorage> *candidates,
+                        const TCHAR *description) throw(IOException);
+  void fireRemoteChainCandidate() throw(IOException);
+  void onRemoteChainReply(bool listed) throw(IOException);
+
+  //
+  // Stops tracking a chain, whether it succeeded, ran out of candidates, or
+  // was superseded by the user navigating somewhere else.
+  //
+
+  void endRemoteChain();
+
+  //
+  // True while a chain is running and the reply arriving now belongs to it.
+  //
+
+  bool isChainReplyExpected() const;
 
   //
   // Filenames helper methods
@@ -275,6 +335,35 @@ protected:
   //
 
   FileInfo *m_fakeMoveUpFolder;
+
+  //
+  // Remembered folders for the connected host.
+  //
+  // Null when the host name is not known, in which case the dialog opens at
+  // the roots and remembers nothing.
+  //
+
+  FtHostState *m_hostState;
+
+  //
+  // Remote candidate chain state. See startRemoteChain.
+  //
+
+  vector<StringStorage> m_chainCandidates;
+  size_t m_chainIndex;
+  bool m_chainActive;
+  StringStorage m_chainDescription;
+
+  //
+  // Guards a reply from an abandoned chain against advancing a live one.
+  //
+  // m_chainGeneration is bumped whenever a chain starts or is cancelled, and
+  // captured into m_chainFiredGeneration each time a candidate goes out. A
+  // reply counts only while the two still agree.
+  //
+
+  UINT m_chainGeneration;
+  UINT m_chainFiredGeneration;
 
 private:
 
