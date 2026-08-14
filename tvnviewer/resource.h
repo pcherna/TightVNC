@@ -104,6 +104,21 @@
 #define IDC_LOG_COMBO                   1029
 #define IDC_TOTAL_PROGRESS              1030
 #define IDC_CANCEL_BUTTON               1031
+#define IDC_LOCAL_PLACES_BUTTON         1093
+#define IDC_REMOTE_PLACES_BUTTON        1094
+#define ftclient_editPlacesDialog       232
+#define IDC_FTEP_PLACES_LIST            1095
+#define IDC_FTEP_PLACE_NAME             1096
+#define IDC_FTEP_ADD_PLACE              1097
+#define IDC_FTEP_RENAME_PLACE           1098
+#define IDC_FTEP_REMOVE_PLACE           1099
+#define IDC_FTEP_CANDS_LIST             1100
+#define IDC_FTEP_CAND_PATH              1101
+#define IDC_FTEP_ADD_CAND               1102
+#define IDC_FTEP_REPLACE_CAND           1103
+#define IDC_FTEP_REMOVE_CAND            1104
+#define IDC_FTEP_UP_CAND                1105
+#define IDC_FTEP_DOWN_CAND              1106
 #define IDC_SHELP                       1032
 #define IDC_CSHOWTOOLBARS               1033
 #define IDC_CWARNATSW                   1034
@@ -173,9 +188,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        232
+#define _APS_NEXT_RESOURCE_VALUE        233
 #define _APS_NEXT_COMMAND_VALUE         40010
-#define _APS_NEXT_CONTROL_VALUE         1093
+#define _APS_NEXT_CONTROL_VALUE         1107
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -34,6 +34,9 @@
 
 #include "ft-common/FileInfo.h"
 
+#include "client-config-lib/FtHostState.h"
+#include "client-config-lib/FtPlaces.h"
+
 #include "io-lib/IOException.h"
 
 #include "FileInfoListView.h"
@@ -49,7 +52,14 @@ class FileTransferMainDialog : public BaseDialog,
                                public FileTransferInterface
 {
 public:
-  FileTransferMainDialog(FileTransferCore *core);
+  //
+  // Parameters:
+  // core - file transfer core driving the operations.
+  // hostName - server host as the user typed it, used to key the remembered
+  //            folders. May be empty, in which case nothing is remembered.
+  //
+
+  FileTransferMainDialog(FileTransferCore *core, const TCHAR *hostName);
   virtual ~FileTransferMainDialog();
 
   //
@@ -123,6 +133,12 @@ protected:
   void onUploadButtonClick();
   void onDownloadButtonClick();
 
+  //
+  // Pops the menu of named places for one pane and acts on the choice.
+  //
+
+  void onPlacesButtonClick(bool remote) throw(IOException);
+
   void moveUpLocalFolder();
   void moveUpRemoteFolder() throw(IOException);
 
@@ -179,10 +195,15 @@ private:
 
   //
   // Displays file list of pathToFile folder of local machine
-  // to local file list view
+  // to local file list view.
+  //
+  // Returns false if the folder could not be listed, leaving the pane as it
+  // was. The failure is written to the message combo box as an error unless
+  // reportFailure is false, which callers walking a list of candidates use
+  // so that they can warn instead and carry on.
   //
 
-  void tryListLocalFolder(const TCHAR *pathToFile);
+  bool tryListLocalFolder(const TCHAR *pathToFile, bool reportFailure = true);
 
   //
   // Sends file list request to server and shows result
@@ -190,6 +211,80 @@ private:
   //
 
   void tryListRemoteFolder(const TCHAR *pathToFile) throw(IOException);
+
+  //
+  // Sends a file list request on the user's behalf.
+  //
+  // Cancels any running candidate chain first, so that a reply still in
+  // flight cannot move the pane after the user has navigated elsewhere.
+  //
+
+  void navigateRemoteFolder(const TCHAR *pathToFile) throw(IOException);
+
+  //
+  // Returns each pane to the folder it was showing the last time this host
+  // was used, falling back to the pane's root.
+  //
+
+  void restoreLocalFolder();
+  void restoreRemoteFolder() throw(IOException);
+
+  //
+  // Remote candidate chain.
+  //
+  // Remote listing is asynchronous. tryListRemoteFolder sends a request and
+  // returns, and the reply arrives later through onFtOpFinished. So trying
+  // several paths until one works cannot be a loop. It is a small state
+  // machine driven by those replies.
+  //
+  // startRemoteChain sends the first candidate. Every failed reply advances
+  // to the next. The first success ends the chain. Running out of candidates
+  // ends it with a message in the combo box and leaves the pane alone.
+  //
+
+  //
+  // placeName names the place being resolved, so that the winning path can
+  // be cached against the host when the chain succeeds. Pass null for a
+  // chain that is not resolving a place.
+  //
+
+  void startRemoteChain(const vector<StringStorage> *candidates,
+                        const TCHAR *description,
+                        const TCHAR *placeName = 0) throw(IOException);
+  void fireRemoteChainCandidate() throw(IOException);
+  void onRemoteChainReply(bool listed) throw(IOException);
+
+  //
+  // Stops tracking a chain, whether it succeeded, ran out of candidates, or
+  // was superseded by the user navigating somewhere else.
+  //
+
+  void endRemoteChain();
+
+  //
+  // True while a chain is running and the reply arriving now belongs to it.
+  //
+
+  bool isChainReplyExpected() const;
+
+  //
+  // Named places.
+  //
+  // Resolving a place means walking its candidate paths and taking the first
+  // that exists. Locally that is a few file system calls. Remotely each
+  // candidate costs a round trip, so it runs as a chain and the winning path
+  // is cached against the host.
+  //
+
+  void goToLocalPlace(const FtPlace *place);
+  void goToRemotePlace(const FtPlace *place) throw(IOException);
+
+  //
+  // Throws away this host's cached resolutions so every place hunts afresh.
+  // Reports how many went, counted from the places defined now.
+  //
+
+  void rescanPlaces();
 
   //
   // Filenames helper methods
@@ -236,6 +331,9 @@ protected:
   Control m_uploadButton;
   Control m_downloadButton;
 
+  Control m_localPlacesButton;
+  Control m_remotePlacesButton;
+
   Control m_cancelButton;
 
   //
@@ -276,9 +374,67 @@ protected:
 
   FileInfo *m_fakeMoveUpFolder;
 
+  //
+  // Remembered folders for the connected host.
+  //
+  // Null when the host name is not known, in which case the dialog opens at
+  // the roots and remembers nothing.
+  //
+
+  FtHostState *m_hostState;
+
+  //
+  // Remote candidate chain state. See startRemoteChain.
+  //
+
+  vector<StringStorage> m_chainCandidates;
+  size_t m_chainIndex;
+  bool m_chainActive;
+  StringStorage m_chainDescription;
+
+  //
+  // Place this chain is resolving, empty when it is not resolving one.
+  //
+
+  StringStorage m_chainPlaceName;
+
+  //
+  // Guards a reply from an abandoned chain against advancing a live one.
+  //
+  // m_chainGeneration is bumped whenever a chain starts or is cancelled, and
+  // captured into m_chainFiredGeneration each time a candidate goes out. A
+  // reply counts only while the two still agree.
+  //
+
+  UINT m_chainGeneration;
+  UINT m_chainFiredGeneration;
+
+  //
+  // Place definitions for each pane. Global rather than per host, and
+  // reloaded each time a menu opens so registry edits take effect without
+  // restarting the viewer.
+  //
+
+  FtPlaces m_localPlaces;
+  FtPlaces m_remotePlaces;
+
 private:
 
   static const UINT WM_OPERATION_FINISHED = WM_USER + 2;
+
+  //
+  // Command ids used only inside the places popup menu.
+  //
+  // TrackPopupMenu is called with TPM_RETURNCMD, so these never reach the
+  // dialog's command handler and cannot collide with control ids. Zero means
+  // the menu was dismissed, which is also what the placeholder shown when no
+  // places exist returns.
+  //
+
+  static const UINT PLACES_MENU_NONE        = 0;
+  static const UINT PLACES_MENU_RESCAN      = 1;
+  static const UINT PLACES_MENU_EDIT        = 2;
+  static const UINT PLACES_MENU_FIRST_PLACE = 100;
 };
 
 #endif

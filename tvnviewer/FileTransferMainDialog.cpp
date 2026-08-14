@@ -28,19 +28,35 @@
 #include "util/winhdr.h"
 #include "NewFolderDialog.h"
 #include "FileRenameDialog.h"
+#include "FtEditPlacesDialog.h"
 
 #include "file-lib/File.h"
 
+#include "gui/Menu.h"
+
+#include "NamingDefs.h"
 #include "resource.h"
 #include <stdio.h>
 
-FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core)
-: FileTransferInterface(core)
+FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core,
+                                               const TCHAR *hostName)
+: FileTransferInterface(core),
+  m_hostState(0),
+  m_chainIndex(0),
+  m_chainActive(false),
+  m_chainGeneration(0),
+  m_chainFiredGeneration(0),
+  m_localPlaces(RegistryPaths::VIEWER_PATH, false),
+  m_remotePlaces(RegistryPaths::VIEWER_PATH, true)
 {
   setResourceId(ftclient_mainDialog);
 
   m_lastSentFileListPath.setString(_T(""));
   m_lastReceivedFileListPath.setString(_T(""));
+
+  if (hostName != 0 && hostName[0] != _T('\0')) {
+    m_hostState = new FtHostState(RegistryPaths::VIEWER_PATH, hostName);
+  }
 
   m_fakeMoveUpFolder = new FileInfo(0, 0, FileInfo::DIRECTORY, _T(".."));
 }
@@ -48,6 +64,7 @@ FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core)
 FileTransferMainDialog::~FileTransferMainDialog()
 {
   delete m_fakeMoveUpFolder;
+  delete m_hostState;
 }
 
 void FileTransferMainDialog::setProgress(double progress)
@@ -86,8 +103,8 @@ BOOL FileTransferMainDialog::onInitDialog()
 
   initControls();
 
-  tryListRemoteFolder(_T("/"));
-  tryListLocalFolder(_T(""));
+  restoreRemoteFolder();
+  restoreLocalFolder();
 
   return TRUE;
 }
@@ -193,6 +210,12 @@ BOOL FileTransferMainDialog::onCommand(UINT controlID, UINT notificationID)
   case IDC_DOWNLOAD_BUTTON:
     onDownloadButtonClick();
     break;
+  case IDC_LOCAL_PLACES_BUTTON:
+    onPlacesButtonClick(false);
+    break;
+  case IDC_REMOTE_PLACES_BUTTON:
+    onPlacesButtonClick(true);
+    break;
   }
   return TRUE;
 }
@@ -213,8 +236,18 @@ void FileTransferMainDialog::onMessageReceived(UINT uMsg, WPARAM wParam, LPARAM 
       int result = static_cast<int>(lParam);
       m_ftCore->onUpdateState(state, result);
 
+      //
+      // A candidate chain spans one operation per candidate, so the controls
+      // must stay disabled until the whole chain settles rather than being
+      // re-enabled between candidates.
+      //
+
+      if (state == FileTransferCore::FILE_LIST_STATE && isChainReplyExpected()) {
+        onRemoteChainReply(result != 0);
+      }
+
       setProgress(0.0);
-      enableControls(true);
+      enableControls(!m_chainActive);
       break;
     } else { // If window is closing we can it only if operation finished
       kill(0);
@@ -604,7 +637,7 @@ void FileTransferMainDialog::moveUpRemoteFolder()
 {
   StringStorage parent;
   getPathToParentRemoteFolder(&parent);
-  tryListRemoteFolder(parent.getString());
+  navigateRemoteFolder(parent.getString());
 }
 
 void FileTransferMainDialog::onRemoteListViewDoubleClick()
@@ -628,7 +661,7 @@ void FileTransferMainDialog::onRemoteListViewDoubleClick()
   }
   StringStorage pathToFile;
   getPathToSelectedRemoteFile(&pathToFile);
-  tryListRemoteFolder(pathToFile.getString());
+  navigateRemoteFolder(pathToFile.getString());
 }
 
 void FileTransferMainDialog::onLocalListViewDoubleClick()
@@ -755,6 +788,9 @@ void FileTransferMainDialog::enableControls(bool enabled)
   m_uploadButton.setEnabled(enabled && m_ftCore->getSupportedOps().isUploadSupported());
   m_downloadButton.setEnabled(enabled && m_ftCore->getSupportedOps().isDownloadSupported());
 
+  m_localPlacesButton.setEnabled(enabled);
+  m_remotePlacesButton.setEnabled(enabled);
+
   m_localFileListView.setEnabled(enabled);
   m_remoteFileListView.setEnabled(enabled);
 
@@ -777,6 +813,9 @@ void FileTransferMainDialog::initControls()
 
   m_uploadButton.setWindow(GetDlgItem(hwnd, IDC_UPLOAD_BUTTON));
   m_downloadButton.setWindow(GetDlgItem(hwnd, IDC_DOWNLOAD_BUTTON));
+
+  m_localPlacesButton.setWindow(GetDlgItem(hwnd, IDC_LOCAL_PLACES_BUTTON));
+  m_remotePlacesButton.setWindow(GetDlgItem(hwnd, IDC_REMOTE_PLACES_BUTTON));
 
   m_cancelButton.setWindow(GetDlgItem(hwnd, IDC_CANCEL_BUTTON));
 
@@ -808,7 +847,8 @@ void FileTransferMainDialog::refreshLocalFileList()
   tryListLocalFolder(pathToFile.getString());
 }
 
-void FileTransferMainDialog::tryListLocalFolder(const TCHAR *pathToFile)
+bool FileTransferMainDialog::tryListLocalFolder(const TCHAR *pathToFile,
+                                                bool reportFailure)
 {
   try {
     vector <FileInfo> *localFileList = m_ftCore->getListLocalFolder(pathToFile);
@@ -833,28 +873,337 @@ void FileTransferMainDialog::tryListLocalFolder(const TCHAR *pathToFile)
     // Enable or disable mkdir button depending on isRoot flag
     m_mkDirLocalButton.setEnabled(!isRoot);
 
+    if (m_hostState != 0) {
+      m_hostState->setLastLocalFolder(pathToFile);
+    }
+
   } catch (...) {
-    StringStorage message;
+    if (reportFailure) {
+      StringStorage message;
 
-    message.format(_T("Error: failed to get file list in local folder '%s'"),
-                   pathToFile);
+      message.format(_T("Error: failed to get file list in local folder '%s'"),
+                     pathToFile);
 
-    insertMessageIntoComboBox(message.getString());
-    return;
+      insertMessageIntoComboBox(message.getString());
+    }
+    return false;
   }
+  return true;
 }
 
 void FileTransferMainDialog::refreshRemoteFileList()
 {
   StringStorage currentFolder;
   m_remoteCurFolderTextBox.getText(&currentFolder);
-  tryListRemoteFolder(currentFolder.getString());
+  navigateRemoteFolder(currentFolder.getString());
 }
 
 void FileTransferMainDialog::tryListRemoteFolder(const TCHAR *pathToFile)
 {
   m_lastSentFileListPath.setString(pathToFile);
   m_ftCore->remoteFileListOperation(pathToFile);
+}
+
+void FileTransferMainDialog::navigateRemoteFolder(const TCHAR *pathToFile)
+{
+  endRemoteChain();
+  tryListRemoteFolder(pathToFile);
+}
+
+void FileTransferMainDialog::restoreLocalFolder()
+{
+  StringStorage saved;
+
+  if (m_hostState != 0 && m_hostState->getLastLocalFolder(&saved)) {
+    if (tryListLocalFolder(saved.getString(), false)) {
+      return;
+    }
+
+    StringStorage warning;
+    warning.format(_T("Warning: %s not found on this computer"),
+                   saved.getString());
+    insertMessageIntoComboBox(warning.getString());
+  }
+  tryListLocalFolder(_T(""));
+}
+
+void FileTransferMainDialog::restoreRemoteFolder()
+{
+  vector<StringStorage> candidates;
+  StringStorage saved;
+
+  //
+  // The remembered folder can be gone, so the server root is the fallback.
+  // Skip the duplicate when the remembered folder is the root already.
+  //
+
+  if (m_hostState != 0 &&
+      m_hostState->getLastRemoteFolder(&saved) &&
+      !saved.isEqualTo(_T("/"))) {
+    candidates.push_back(saved);
+  }
+  candidates.push_back(StringStorage(_T("/")));
+
+  startRemoteChain(&candidates, _T("the remembered folder"));
+}
+
+void FileTransferMainDialog::startRemoteChain(const vector<StringStorage> *candidates,
+                                              const TCHAR *description,
+                                              const TCHAR *placeName)
+{
+  //
+  // Copied element by element rather than by vector assignment, because
+  // StringStorage::operator = returns void and so is not assignable in the
+  // sense the standard containers ask for.
+  //
+
+  m_chainCandidates.clear();
+  for (size_t i = 0; i < candidates->size(); i++) {
+    m_chainCandidates.push_back(candidates->at(i));
+  }
+
+  m_chainIndex = 0;
+  m_chainActive = false;
+  m_chainDescription.setString(description);
+  m_chainPlaceName.setString(placeName != 0 ? placeName : _T(""));
+  m_chainGeneration++;
+
+  if (m_chainCandidates.empty()) {
+    return;
+  }
+
+  m_chainActive = true;
+  fireRemoteChainCandidate();
+}
+
+void FileTransferMainDialog::fireRemoteChainCandidate()
+{
+  m_chainFiredGeneration = m_chainGeneration;
+  tryListRemoteFolder(m_chainCandidates.at(m_chainIndex).getString());
+}
+
+void FileTransferMainDialog::endRemoteChain()
+{
+  m_chainActive = false;
+  m_chainCandidates.clear();
+  m_chainPlaceName.setString(_T(""));
+  m_chainGeneration++;
+}
+
+bool FileTransferMainDialog::isChainReplyExpected() const
+{
+  return m_chainActive && (m_chainFiredGeneration == m_chainGeneration);
+}
+
+void FileTransferMainDialog::onRemoteChainReply(bool listed)
+{
+  if (listed) {
+    //
+    // Remember which candidate won, so the next visit to this place costs a
+    // single request instead of hunting again.
+    //
+
+    if (!m_chainPlaceName.isEmpty() && m_hostState != 0) {
+      m_hostState->setResolvedPlace(m_chainPlaceName.getString(),
+                                    m_chainCandidates.at(m_chainIndex).getString());
+    }
+    endRemoteChain();
+    return;
+  }
+
+  StringStorage warning;
+  warning.format(_T("Warning: %s not found on the server"),
+                 m_chainCandidates.at(m_chainIndex).getString());
+  insertMessageIntoComboBox(warning.getString());
+
+  m_chainIndex++;
+  if (m_chainIndex < m_chainCandidates.size()) {
+    fireRemoteChainCandidate();
+    return;
+  }
+
+  StringStorage message;
+  message.format(_T("Error: no folder found on the server for %s"),
+                 m_chainDescription.getString());
+  insertMessageIntoComboBox(message.getString());
+
+  endRemoteChain();
+}
+
+void FileTransferMainDialog::onPlacesButtonClick(bool remote)
+{
+  //
+  // Reread every time, so places edited in the registry show up without
+  // restarting the viewer.
+  //
+
+  FtPlaces *places = remote ? &m_remotePlaces : &m_localPlaces;
+  places->load();
+
+  Menu menu;
+  menu.createPopupMenu();
+
+  size_t count = places->getCount();
+
+  if (count == 0) {
+    //
+    // Command id zero is what a dismissed menu returns, so this entry is
+    // inert without needing to be greyed.
+    //
+
+    StringStorage empty(_T("(no places defined)"));
+    menu.appendMenu(empty, PLACES_MENU_NONE);
+  } else {
+    for (size_t i = 0; i < count; i++) {
+      menu.appendMenu(places->getPlace(i)->name,
+                      static_cast<UINT>(PLACES_MENU_FIRST_PLACE + i));
+    }
+  }
+
+  menu.appendSeparator();
+
+  //
+  // Only remote resolutions are cached, so only that pane needs a rescan.
+  // Local hunting is a few file system calls and always runs fresh.
+  //
+
+  if (remote) {
+    StringStorage rescan(_T("Rescan"));
+    menu.appendMenu(rescan, PLACES_MENU_RESCAN);
+  }
+
+  StringStorage edit(_T("Edit Places..."));
+  menu.appendMenu(edit, PLACES_MENU_EDIT);
+
+  Control *button = remote ? &m_remotePlacesButton : &m_localPlacesButton;
+  RECT buttonRect;
+  GetWindowRect(button->getWindow(), &buttonRect);
+
+  int action = TrackPopupMenu(menu.getMenu(),
+                              TPM_NONOTIFY | TPM_RETURNCMD | TPM_LEFTALIGN,
+                              buttonRect.left, buttonRect.bottom,
+                              0, m_ctrlThis.getWindow(), NULL);
+
+  if (action == PLACES_MENU_NONE) {
+    return;
+  }
+  if (action == PLACES_MENU_RESCAN) {
+    rescanPlaces();
+    return;
+  }
+  if (action == PLACES_MENU_EDIT) {
+    FtEditPlacesDialog editor(&m_ctrlThis, remote);
+
+    if (editor.showModal() == IDOK) {
+      places->load();
+    }
+    return;
+  }
+
+  size_t index = static_cast<size_t>(action - PLACES_MENU_FIRST_PLACE);
+  if (index >= places->getCount()) {
+    return;
+  }
+
+  if (remote) {
+    goToRemotePlace(places->getPlace(index));
+  } else {
+    goToLocalPlace(places->getPlace(index));
+  }
+}
+
+void FileTransferMainDialog::goToLocalPlace(const FtPlace *place)
+{
+  //
+  // Local resolution runs fresh every time. Checking a path costs a file
+  // system call, so caching would buy nothing and could only go stale.
+  //
+
+  for (size_t i = 0; i < place->candidates.size(); i++) {
+    const TCHAR *path = place->candidates.at(i).getString();
+
+    File candidate(path);
+    if (candidate.exists() && candidate.isDirectory()) {
+      if (tryListLocalFolder(path, false)) {
+        return;
+      }
+    }
+
+    //
+    // A candidate that is missing, or that exists but will not list, is only
+    // a warning while others remain to be tried.
+    //
+
+    StringStorage warning;
+    warning.format(_T("Warning: %s not found on this computer"), path);
+    insertMessageIntoComboBox(warning.getString());
+  }
+
+  StringStorage message;
+  message.format(_T("Error: no folder found on this computer for %s"),
+                 place->name.getString());
+  insertMessageIntoComboBox(message.getString());
+}
+
+void FileTransferMainDialog::goToRemotePlace(const FtPlace *place)
+{
+  vector<StringStorage> candidates;
+  StringStorage cached;
+
+  //
+  // A cached answer goes first rather than replacing the hunt. If the folder
+  // has since gone, the chain simply carries on into the real candidates and
+  // the stale entry is overwritten by whatever wins.
+  //
+
+  bool haveCached = m_hostState != 0 &&
+                    m_hostState->getResolvedPlace(place->name.getString(), &cached);
+
+  if (haveCached) {
+    candidates.push_back(cached);
+  }
+
+  for (size_t i = 0; i < place->candidates.size(); i++) {
+    if (haveCached && cached.isEqualTo(&place->candidates.at(i))) {
+      continue;
+    }
+    candidates.push_back(place->candidates.at(i));
+  }
+
+  startRemoteChain(&candidates,
+                   place->name.getString(),
+                   place->name.getString());
+}
+
+void FileTransferMainDialog::rescanPlaces()
+{
+  if (m_hostState == 0) {
+    insertMessageIntoComboBox(_T("No server name is known, so nothing is cached"));
+    return;
+  }
+
+  //
+  // Counted from the places defined now. RegistryKey cannot enumerate values,
+  // and an entry left over from a deleted place is not worth reporting even
+  // though clearing removes it too.
+  //
+
+  size_t cachedCount = 0;
+  StringStorage resolved;
+
+  for (size_t i = 0; i < m_remotePlaces.getCount(); i++) {
+    if (m_hostState->getResolvedPlace(m_remotePlaces.getPlace(i)->name.getString(),
+                                      &resolved)) {
+      cachedCount++;
+    }
+  }
+
+  m_hostState->clearResolvedPlaces();
+
+  StringStorage message;
+  message.format(_T("Cleared %u cached location(s) for this server"),
+                 static_cast<unsigned int>(cachedCount));
+  insertMessageIntoComboBox(message.getString());
 }
 
 void FileTransferMainDialog::getPathToCurrentLocalFolder(StringStorage *out)
@@ -928,6 +1277,15 @@ void FileTransferMainDialog::setNothingState()
   m_lastReceivedFileListPath = m_lastSentFileListPath;
   m_remoteCurFolderTextBox.setText(m_lastReceivedFileListPath.getString());
 
+  //
+  // Only successful listings reach here. FileTransferCore::onUpdateState
+  // skips this call when the file list request failed.
+  //
+
+  if (m_hostState != 0) {
+    m_hostState->setLastRemoteFolder(m_lastReceivedFileListPath.getString());
+  }
+
   m_remoteFileListView.clear();
   vector<FileInfo> *fileRemoteList = m_ftCore->getListRemoteFolder();
   if (!fileRemoteList->empty()) {
@@ -945,6 +1303,15 @@ void FileTransferMainDialog::setNothingState()
 
 void FileTransferMainDialog::onFtOpError(const TCHAR *message)
 {
+  //
+  // A candidate failing part way through a chain is not an error, because a
+  // later candidate may still work. The chain reports each one as a warning
+  // itself, and raises a single error only once every candidate has failed.
+  //
+
+  if (isChainReplyExpected()) {
+    return;
+  }
   insertMessageIntoComboBox(message);
 }
 

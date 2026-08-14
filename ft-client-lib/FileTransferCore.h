@@ -61,6 +61,27 @@ public:
 
   void setInterface(FileTransferInterface *ftInterface);
 
+  //
+  // Avaliable m_state values.
+  //
+  // These are public because they are handed to the interface implementation
+  // through FileTransferInterface::onFtOpFinished(state, result), which needs
+  // them to tell which kind of operation just finished.
+  //
+  // FIXME: Maybe make m_state enumeration?
+  //
+
+  static const int NOTHING_STATE      = 0x0;
+  static const int FILE_LIST_STATE    = 0x1;
+  static const int REMOVE_STATE       = 0x2;
+  static const int MKDIR_STATE        = 0x3;
+  static const int RENAME_STATE       = 0x4;
+
+  static const int LOCAL_REMOVE_STATE = 0x5;
+
+  static const int UPLOAD_STATE       = 0x6;
+  static const int DOWNLOAD_STATE     = 0x7;
+
   const OperationSupport &getSupportedOps();
 
   vector<FileInfo> *getListLocalFolder(const TCHAR *pathToFile);
@@ -185,22 +206,6 @@ protected:
   //
 
   void executeOperation(FileTransferOperation *newOperation) throw(IOException);
-  //
-  // Avaliable m_state values
-  // FIXME: Maybe make m_state enumeration?
-  //
-
-  static const int NOTHING_STATE      = 0x0;
-  static const int FILE_LIST_STATE    = 0x1;
-  static const int REMOVE_STATE       = 0x2;
-  static const int MKDIR_STATE        = 0x3;
-  static const int RENAME_STATE       = 0x4;
-
-  static const int LOCAL_REMOVE_STATE = 0x5;
-
-  static const int UPLOAD_STATE       = 0x6;
-  static const int DOWNLOAD_STATE     = 0x7;
-
 };
 
 #endif

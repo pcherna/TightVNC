@@ -685,6 +685,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\FtEditPlacesDialog.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\FileTransferMainDialog.cpp"
 				>
 			</File>
@@ -800,6 +804,10 @@
 			</File>
 			<File
 				RelativePath=".\FileRenameDialog.h"
+				>
+			</File>
+			<File
+				RelativePath=".\FtEditPlacesDialog.h"
 				>
 			</File>
 			<File
