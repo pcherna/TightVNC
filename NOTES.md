@@ -125,9 +125,14 @@ system from scratch, and the result cannot be tested without Windows. Use a
 Windows VM with Visual Studio.
 
 Upstream targeted the `v141_xp` toolset and the Windows 8.1 SDK. Neither ships
-with Visual Studio 2026, so the projects now use plain `v141` and let the SDK
-float to whatever is installed. Install the "MSVC v141 build tools" individual
-component alongside the C++ desktop workload.
+with Visual Studio 2026, so the projects now use plain `v141` and Windows SDK
+`10.0.26100.0`. Install the "MSVC v141 build tools" individual component
+alongside the C++ desktop workload.
+
+The SDK version is pinned rather than set to the bare `10.0` shorthand. v141
+does not honour that shorthand and fails with "The Windows SDK version 10.0 was
+not found" even when an SDK is installed. Building on a machine with a different
+SDK means changing this value, which "Retarget solution" does.
 
 Stay on v141 rather than a newer toolset. The tree has 298 dynamic exception
 specifications across 81 files, which C++17 removed from the language. v141
