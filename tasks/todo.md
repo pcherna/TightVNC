@@ -54,6 +54,54 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 - [x] Add the new files to both project formats
 - [x] Build and run the phase 2b manual checks
 
+## Phase 4: places on the toolbar
+
+The first few places of each pane get a button of their own, on a row above
+the path box. Everything else moves behind one button at the end of that row.
+
+- [x] `FtPlaces` stores an `Order` value in each place's key, and `load` sorts
+      by it
+- [x] `save` writes the order from the list position
+- [x] Up and Down for the places list in Edit Places, growing that dialog to
+      320 x 210
+- [x] Three place buttons and an overflow button per pane in `tvnviewer.rc`,
+      on a new row above the path box
+- [x] Grow the file transfer dialog to 503 x 359 and shift everything below
+      the new row down by 19
+- [x] Label the buttons when the dialog opens, and hide the empty slots
+- [x] Menu holds only the places past the third, plus Rescan and Edit Places
+- [ ] Build and run the phase 4 manual checks
+
+### Phase 4 manual checks
+
+- [ ] Open file transfer with no places defined. Each pane shows the arrow
+      button alone. Its menu says "(no places defined)" and offers Edit Places.
+- [ ] Define one place. It appears on the first button. The other two stay
+      hidden. The menu holds no place entries and no leading separator.
+- [ ] Define five places. Three sit on buttons and two are in the menu.
+- [ ] Click each of the three buttons. Each navigates to its own place.
+- [ ] Pick a place from the menu. It navigates to the right one, not to an
+      entry three rows off.
+- [ ] Select the fourth place in Edit Places, press Up twice, press OK. It
+      moves onto the second button straight away.
+- [ ] Check that `HKCU\Software\TightVNC\Viewer\FtPlaces\Local\<name>` holds an
+      `Order` value alongside the numbered candidate values.
+- [ ] Add a place under that key by hand, with a candidate but no `Order`.
+      Reopen the menu. The place appears last.
+- [ ] Confirm the arrow glyph on the overflow button renders as a triangle and
+      is not clipped by the 18 unit button.
+- [ ] Check both panes. The buttons line up with the path box on the left and
+      the arrow button meets the right edge.
+- [ ] Start a transfer. Every place button greys with the rest of the controls
+      and comes back when the transfer ends.
+- [ ] Rescan still appears in the remote menu and not in the local one.
+- [ ] Give a place a very long name. The button clips it and nothing else on
+      the row moves.
+- [ ] Reorder places in Edit Places and press OK. The remote pane still uses
+      its cached folders, since order changes no candidate.
+- [ ] Confirm the log combo, progress bar and Cancel button sit at the bottom
+      of the taller window without clipping.
+
 ## Domain rules
 
 Accreted as they surface. These are decisions, not guesses.
@@ -98,6 +146,43 @@ Accreted as they surface. These are decisions, not guesses.
   sense the standard containers ask for. Anything that would shift elements by
   assignment, `vector::erase` and whole-vector assignment both, is written as
   a rebuild through copy construction instead.
+- Enter in a text box beside a list acts on the selection. It renames or
+  replaces the highlighted row, and adds a row when none is highlighted.
+  Selecting a row copies it into the box, so select, edit, Enter has to mean
+  rename or replace. Adding there would leave the old row behind next to a
+  near-duplicate.
+- Enter in an empty box closes the dialog, which is what it does everywhere
+  else in it. Enter is swallowed when the action refuses, a duplicate for
+  instance, because closing on the back of a refusal is the same loss the fix
+  exists to prevent.
+- Places have an order the user sets, held in an `Order` value inside each
+  place's key. Registry enumeration is alphabetical, which is not an order
+  anyone chose, and the buttons make the first few places matter.
+- The candidate values are numbers and `Order` is a word, so the two names
+  cannot collide inside the same key.
+- A place with no `Order` value sorts after every place that has one, keeping
+  its alphabetical position among the others. A place added to the registry by
+  hand appears at the end rather than displacing a button.
+- Order is written from the list position, counted over the places actually
+  written. A place skipped for having no candidates leaves no gap.
+- The buttons act on the places as they were last read, without rereading
+  first. A button always goes where its own label says.
+- The menu is the only thing that rereads, and it relabels the buttons when it
+  does. That keeps the promise that a registry edit shows up without a
+  restart.
+- An empty button slot is hidden, not greyed. A greyed button with no caption
+  says a place is there but unavailable, which is not what an empty slot means.
+- The menu holds only the places past the third. Repeating the ones already on
+  buttons would make the row look like it had failed to take them.
+- The menu has no separator when every place is on a button, because nothing
+  sits above it to separate.
+- The menu is right aligned on its button, which sits at the right edge of the
+  pane. A left aligned menu would hang off the window.
+- Place buttons are a fixed width and clip a name too long for them. Equal
+  widths keep the two panes in step, and a clipped name is a naming problem the
+  user can see and fix.
+- Reordering places invalidates no cached resolution. The cache is keyed by
+  place name and turns on the candidates, and order touches neither.
 
 ## Review
 
@@ -120,3 +205,34 @@ race with `executeOperation` deleting the operation that just finished. It does
 not. `FileTransferMessageProcessor::processRfbMessage` holds its listener lock
 across the whole dispatch, and `executeOperation` blocks on that same lock
 before it deletes. The delete cannot overlap the notify.
+
+### Phase 4
+
+Implementation complete, not yet compiled. The Windows build and the manual
+checks are still outstanding.
+
+Putting places on buttons forced a question the feature had dodged. There was
+no order. `load` returned whatever the registry enumeration gave back, which is
+alphabetical by name. Three buttons make the first three places matter, so
+promoting a place would have meant renaming it. An `Order` value per place and
+Up and Down in the editor fix that, and the menu shows the same order.
+
+The order is the list position rather than a field on `FtPlace`. `save` writes
+the position out and `load` sorts by what it reads, so the editor gets
+reordering for free from the vector it already holds.
+
+Sorting needed care. `StringStorage` assignment returns void, so `std::sort`
+cannot be pointed at a `vector<FtPlace>`. `load` sorts a vector of
+(order, position read) pairs instead and rebuilds the list from that. Ties keep
+the alphabetical order the registry handed back, which is what puts unordered
+places at the end in a sensible sequence. `swapPlaces` in the editor rebuilds
+through copy construction for the same reason `erasePlace` does.
+
+Two things the layout change dragged in. The transfer arrows are centred
+against the file lists, so they moved down by the same 19 units as everything
+else. The overflow menu is right aligned now, since its button sits at the
+right edge of the pane rather than the left.
+
+The arrow glyph on the overflow button is the one thing that cannot be checked
+from here. It is U+25BC in a UTF-16 resource file, and Ms Shell Dlg 2 should
+have it, but the manual checks look at it.

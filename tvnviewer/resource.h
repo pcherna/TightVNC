@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
-// Включаемый файл, созданный в Microsoft Visual C++.
-// Используется tvnviewer.rc
+// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ Microsoft Visual C++.
+// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ tvnviewer.rc
 //
 #define IDB_TOOLBAR                     101
 #define IDI_CNOCURSOR                   102
@@ -104,8 +104,14 @@
 #define IDC_LOG_COMBO                   1029
 #define IDC_TOTAL_PROGRESS              1030
 #define IDC_CANCEL_BUTTON               1031
-#define IDC_LOCAL_PLACES_BUTTON         1093
-#define IDC_REMOTE_PLACES_BUTTON        1094
+#define IDC_LOCAL_PLACES_MORE_BUTTON    1093
+#define IDC_REMOTE_PLACES_MORE_BUTTON   1094
+#define IDC_LOCAL_PLACE1_BUTTON         1114
+#define IDC_LOCAL_PLACE2_BUTTON         1115
+#define IDC_LOCAL_PLACE3_BUTTON         1116
+#define IDC_REMOTE_PLACE1_BUTTON        1117
+#define IDC_REMOTE_PLACE2_BUTTON        1118
+#define IDC_REMOTE_PLACE3_BUTTON        1119
 #define ftclient_editPlacesDialog       232
 #define IDC_FTEP_PLACES_LIST            1095
 #define IDC_FTEP_PLACE_NAME             1096
@@ -119,6 +125,8 @@
 #define IDC_FTEP_REMOVE_CAND            1104
 #define IDC_FTEP_UP_CAND                1105
 #define IDC_FTEP_DOWN_CAND              1106
+#define IDC_FTEP_UP_PLACE               1120
+#define IDC_FTEP_DOWN_PLACE             1121
 #define IDC_SHELP                       1032
 #define IDC_CSHOWTOOLBARS               1033
 #define IDC_CWARNATSW                   1034
@@ -190,7 +198,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        233
 #define _APS_NEXT_COMMAND_VALUE         40010
-#define _APS_NEXT_CONTROL_VALUE         1107
+#define _APS_NEXT_CONTROL_VALUE         1122
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

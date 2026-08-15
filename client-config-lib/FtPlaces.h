@@ -57,12 +57,24 @@ struct FtPlace
 // with the candidates stored as numbered values, the shape ConnectionHistory
 // already uses:
 //
-//   0 = C:/ProgramData/Acme/logs
-//   1 = C:/Acme/logs
-//   2 = D:/Acme/logs
+//   0     = C:/ProgramData/Acme/logs
+//   1     = C:/Acme/logs
+//   2     = D:/Acme/logs
+//   Order = 0
 //
-// Reading a place stops at the first gap in the numbering. Places come back
-// in registry enumeration order, which is alphabetical by name.
+// Reading a place stops at the first gap in the numbering. The candidate
+// values are numbers and the order value is a word, so the two cannot
+// collide.
+//
+// Places come back in the order given by their Order value, lowest first.
+// Order is what the dialog puts on its buttons: the first three places get a
+// button each and the rest go in the menu, so the user has to be able to say
+// which three those are. Registry enumeration is alphabetical, which is not
+// something anyone chose.
+//
+// A place with no Order value sorts after every place that has one, keeping
+// its alphabetical position among the others. A place added to the registry
+// by hand therefore appears at the end rather than displacing a button.
 //
 // Candidates may be written with either slash. Loading rewrites them to the
 // separator the pane actually uses, forward for remote and backward for
@@ -89,12 +101,19 @@ public:
   // Places with no candidates are skipped. They could never resolve, so
   // offering them would only produce a menu entry that always fails.
   //
+  // The result is sorted by the Order value, so getPlace(0) is the place the
+  // user put first.
+  //
 
   void load();
 
   //
   // Replaces everything stored for this side with the given list, then
   // rereads it.
+  //
+  // The position of a place in the list is its order, and is written out as
+  // the Order value. Reordering the list is therefore all the editor has to
+  // do to reorder the buttons.
   //
   // Existing definitions are removed first, so a place dropped from the list
   // disappears from the registry and no stale candidate numbering survives.
@@ -138,6 +157,12 @@ private:
   //
 
   static const size_t MAX_CANDIDATES = 64;
+
+  //
+  // Name of the value holding a place's position in the list.
+  //
+
+  static const TCHAR ORDER_VALUE[];
 };
 
 #endif

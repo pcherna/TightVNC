@@ -70,6 +70,33 @@ static void erasePlace(vector<FtPlace> *places, size_t index)
 }
 
 //
+// Exchanges two places, rebuilt through copy construction for the same reason
+// erasePlace is. StringStorage assignment returns void, so an FtPlace cannot
+// be shifted about by the standard algorithms.
+//
+
+static void swapPlaces(vector<FtPlace> *places, size_t a, size_t b)
+{
+  vector<FtPlace> rebuilt;
+
+  for (size_t i = 0; i < places->size(); i++) {
+    size_t take = i;
+
+    if (i == a) {
+      take = b;
+    } else if (i == b) {
+      take = a;
+    }
+    rebuilt.push_back(places->at(take));
+  }
+
+  places->clear();
+  for (size_t i = 0; i < rebuilt.size(); i++) {
+    places->push_back(rebuilt.at(i));
+  }
+}
+
+//
 // True when two places list exactly the same candidates in the same order.
 // Order matters, because it decides which path wins.
 //
@@ -125,6 +152,8 @@ void FtEditPlacesDialog::initControls()
   m_addPlaceButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_ADD_PLACE));
   m_renamePlaceButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_RENAME_PLACE));
   m_removePlaceButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_REMOVE_PLACE));
+  m_upPlaceButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_UP_PLACE));
+  m_downPlaceButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_DOWN_PLACE));
 
   m_addCandidateButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_ADD_CAND));
   m_replaceCandidateButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_REPLACE_CAND));
@@ -170,6 +199,12 @@ BOOL FtEditPlacesDialog::onCommand(UINT controlID, UINT notificationID)
     break;
   case IDC_FTEP_REMOVE_PLACE:
     onRemovePlace();
+    break;
+  case IDC_FTEP_UP_PLACE:
+    onMovePlace(-1);
+    break;
+  case IDC_FTEP_DOWN_PLACE:
+    onMovePlace(1);
     break;
   case IDC_FTEP_ADD_CAND:
     onAddCandidate();
@@ -305,9 +340,13 @@ void FtEditPlacesDialog::updateButtons()
   bool haveName = !typedName.isEmpty();
   bool havePath = !typedPath.isEmpty();
 
+  int placeCount = static_cast<int>(m_working.size());
+
   m_addPlaceButton.setEnabled(haveName);
   m_renamePlaceButton.setEnabled(havePlace && haveName);
   m_removePlaceButton.setEnabled(havePlace);
+  m_upPlaceButton.setEnabled(havePlace && place > 0);
+  m_downPlaceButton.setEnabled(havePlace && place < placeCount - 1);
 
   m_addCandidateButton.setEnabled(havePlace && havePath);
   m_replaceCandidateButton.setEnabled(haveCandidate && havePath);
@@ -405,6 +444,25 @@ void FtEditPlacesDialog::onRemovePlace()
   erasePlace(&m_working, static_cast<size_t>(place));
 
   fillPlacesList(place);
+}
+
+void FtEditPlacesDialog::onMovePlace(int delta)
+{
+  int place = getSelectedPlace();
+  if (place < 0) {
+    return;
+  }
+
+  int target = place + delta;
+
+  if (target < 0 || target >= static_cast<int>(m_working.size())) {
+    return;
+  }
+
+  swapPlaces(&m_working, static_cast<size_t>(place),
+             static_cast<size_t>(target));
+
+  fillPlacesList(target);
 }
 
 void FtEditPlacesDialog::onAddCandidate()

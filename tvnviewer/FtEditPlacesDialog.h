@@ -42,6 +42,10 @@ using namespace std;
 // Edits a working copy and writes nothing until OK. Cancel therefore leaves
 // the registry exactly as it was.
 //
+// The order of the places list is the order they appear in, and the first few
+// of them get a button of their own in the file transfer dialog. Up and Down
+// are how a place reaches a button.
+//
 // Saving also drops the cached resolution of every place whose candidates
 // changed, on every host, so that an edit reaches the machines already
 // resolved rather than only the ones never visited.
@@ -94,6 +98,15 @@ private:
   void onAddPlace();
   void onRenamePlace();
   void onRemovePlace();
+
+  //
+  // Moves the selected place by one row. The order of this list is the order
+  // the places appear in, and the first few of them get a button of their own
+  // in the file transfer dialog, so this is how a place is promoted onto the
+  // toolbar.
+  //
+
+  void onMovePlace(int delta);
 
   void onAddCandidate();
   void onReplaceCandidate();
@@ -167,6 +180,8 @@ private:
   Control m_addPlaceButton;
   Control m_renamePlaceButton;
   Control m_removePlaceButton;
+  Control m_upPlaceButton;
+  Control m_downPlaceButton;
 
   Control m_addCandidateButton;
   Control m_replaceCandidateButton;

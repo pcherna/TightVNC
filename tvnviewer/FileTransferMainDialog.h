@@ -134,10 +134,32 @@ protected:
   void onDownloadButtonClick();
 
   //
-  // Pops the menu of named places for one pane and acts on the choice.
+  // Goes to the place sitting on button slot for one pane.
+  //
+  // The buttons act on the places as they were last read, without rereading
+  // first, so a button always goes where its own label says. The menu is what
+  // picks up an edit made in the registry, and relabelling happens there.
   //
 
-  void onPlacesButtonClick(bool remote) throw(IOException);
+  void onPlaceButtonClick(bool remote, size_t slot) throw(IOException);
+
+  //
+  // Pops the menu holding whatever did not fit on the buttons, plus Rescan
+  // and Edit Places, and acts on the choice.
+  //
+
+  void onPlacesMoreButtonClick(bool remote) throw(IOException);
+
+  //
+  // Labels one pane's place buttons from the places now loaded, and hides the
+  // slots with no place to show.
+  //
+  // Hiding rather than greying keeps the row honest. A greyed button with no
+  // caption says a place is there but unavailable, which is not what an empty
+  // slot means.
+  //
+
+  void updatePlaceButtons(bool remote);
 
   void moveUpLocalFolder();
   void moveUpRemoteFolder() throw(IOException);
@@ -331,8 +353,22 @@ protected:
   Control m_uploadButton;
   Control m_downloadButton;
 
-  Control m_localPlacesButton;
-  Control m_remotePlacesButton;
+  //
+  // Places sit on a row of their own above each path box. The first few get
+  // a button each and the rest go behind the button at the end of the row.
+  //
+  // Three is what the pane is wide enough for at a readable button width. The
+  // count is named rather than spelled out because the resource, the labelling
+  // and the menu all have to agree on it.
+  //
+
+  static const size_t PLACE_BUTTON_COUNT = 3;
+
+  Control m_localPlaceButtons[PLACE_BUTTON_COUNT];
+  Control m_remotePlaceButtons[PLACE_BUTTON_COUNT];
+
+  Control m_localPlacesMoreButton;
+  Control m_remotePlacesMoreButton;
 
   Control m_cancelButton;
 
