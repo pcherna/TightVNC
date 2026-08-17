@@ -123,51 +123,57 @@ the path box. Everything else moves behind one button at the end of that row.
       button alone. Its menu says "(no places defined)" and offers Edit Places.
 - [x] Define one place. It appears on the first button. The other three stay
       hidden. The menu holds no place entries and no leading separator.
-- [ ] Define six places. Four sit on buttons and two are in the menu.
-- [ ] Click each of the four buttons. Each navigates to its own place.
-- [ ] Pick a place from the menu. It navigates to the right one, not to an
+- [x] Define six places. Four sit on buttons and two are in the menu.
+- [x] Click each of the four buttons. Each navigates to its own place.
+- [x] Pick a place from the menu. It navigates to the right one, not to an
       entry four rows off.
-- [ ] Select the fifth place in Edit Places, press Up twice, press OK. It
+- [x] Select the fifth place in Edit Places, press Up twice, press OK. It
       moves onto the third button straight away.
-- [ ] Check that a name of about twelve characters fits a button without
+- [x] Check that a name of about twelve characters fits a button without
       clipping, now that the buttons are 50 units rather than 67.
 - [x] Check that `HKCU\Software\TightVNC\Viewer\FtPlaces\Local\<name>` holds an
       `Order` value alongside the numbered candidate values.
-- [ ] Add a place under that key by hand, with a candidate but no `Order`.
+- [x] Add a place under that key by hand, with a candidate but no `Order`.
       Reopen the menu. The place appears last.
-- [ ] Confirm the arrow glyph on the overflow button renders as a triangle and
+- [x] Confirm the arrow glyph on the overflow button renders as a triangle and
       is not clipped by the 18 unit button.
-- [ ] Check both panes. The buttons line up with the path box on the left and
+- [x] Check both panes. The buttons line up with the path box on the left and
       the arrow button meets the right edge.
-- [ ] Start a transfer. Every place button greys with the rest of the controls
+- [x] Start a transfer. Every place button greys with the rest of the controls
       and comes back when the transfer ends.
-- [ ] Rescan still appears in the remote menu and not in the local one.
-- [ ] Give a place a very long name. The button clips it and nothing else on
-      the row moves.
-- [ ] Reorder places in Edit Places and press OK. The remote pane still uses
+- [x] Rescan still appears in the remote menu and not in the local one.
+- [ ] Give a place a very long name. The button shows the start of it followed
+      by an ellipsis, and nothing else on the row moves.
+- [ ] Give a place a name that only just overflows. One or two characters go
+      and the ellipsis appears, rather than half the name.
+- [ ] Give a place a one-word name that fits. It stays centred with no
+      ellipsis.
+- [ ] Give a place a name of a single very wide character. The button shows an
+      ellipsis rather than an empty face.
+- [x] Reorder places in Edit Places and press OK. The remote pane still uses
       its cached folders, since order changes no candidate.
-- [ ] Confirm the log combo, progress bar and Cancel button sit at the bottom
+- [x] Confirm the log combo, progress bar and Cancel button sit at the bottom
       of the taller window without clipping.
-- [ ] Name a place `Support\BCF` and give it a candidate. The list shows
+- [x] Name a place `Support\BCF` and give it a candidate. The list shows
       `Support/BCF` as soon as you press Add. After OK it gets a button, and
       `FtPlaces\Local` holds one key named `Support/BCF` with no `Support` key
       beside it.
-- [ ] Confirm the stray `Support` key left by the earlier build is gone after
+- [x] Confirm the stray `Support` key left by the earlier build is gone after
       that save.
-- [ ] Rename a place to one holding a backslash, where the forward slash form
+- [x] Rename a place to one holding a backslash, where the forward slash form
       already exists. The duplicate warning appears.
-- [ ] Add a place name, add no path, press OK. The warning names that place.
+- [x] Add a place name, add no path, press OK. The warning names that place.
       Press Cancel. The dialog stays open with the place selected and the
       cursor in the path box.
-- [ ] Type a path there and press Enter. It is added. Press OK. The dialog
+- [x] Type a path there and press Enter. It is added. Press OK. The dialog
       closes with no warning and the place gets a button.
-- [ ] Add two places with no paths, press OK, press OK on the warning. Both
+- [x] Add two places with no paths, press OK, press OK on the warning. Both
       are dropped and the rest still save.
-- [ ] Press Enter on the warning box. It cancels rather than saves.
-- [ ] Hover the arrow button on each pane. A "Places" tooltip appears on both.
-- [ ] Start a transfer and hover it again. No tooltip, because the button is
+- [x] Press Enter on the warning box. It cancels rather than saves.
+- [x] Hover the arrow button on each pane. A "Places" tooltip appears on both.
+- [x] Start a transfer and hover it again. No tooltip, because the button is
       disabled.
-- [ ] Close and reopen the file transfer dialog. The tooltip still works.
+- [x] Close and reopen the file transfer dialog. The tooltip still works.
 
 ## Domain rules
 
@@ -259,9 +265,17 @@ Accreted as they surface. These are decisions, not guesses.
   sits above it to separate.
 - The menu is right aligned on its button, which sits at the right edge of the
   pane. A left aligned menu would hang off the window.
-- Place buttons are a fixed width and clip a name too long for them. Equal
-  widths keep the two panes in step, and a clipped name is a naming problem the
-  user can see and fix.
+- Place buttons are a fixed width. Equal widths keep the two panes in step.
+- A name too long for its button is cut back to a leading portion and an
+  ellipsis. A push button centres its caption and clips both ends, so the
+  untouched name came out as its middle, which reads as nothing. The start of
+  a name is the part that identifies it.
+- The name is measured against the button rather than cut at a character
+  count. The dialog font is proportional, so a character count would be wrong
+  in both directions.
+- Measuring selects the button's own font into the DC first. The dialog font
+  is not the system default, so measuring without it would answer for the
+  wrong typeface.
 - Reordering places invalidates no cached resolution. The cache is keyed by
   place name and turns on the candidates, and order touches neither.
 - A backslash in a place name becomes a forward slash. The registry API reads
@@ -335,6 +349,16 @@ The row carries four buttons. It started at three of 67 dialog units, which
 left the pane wider than it needed to be. Four of 50 with two units between
 them fill the same 206 units, and 50 units is about twelve characters. Only
 `PLACE_BUTTON_COUNT`, the resource, and the command switch know the number.
+
+Narrower buttons made the clipping visible. A push button centres its caption
+and clips both ends, so a long name came out as its middle, which identifies
+nothing. Names are now measured against the button and cut back to a leading
+portion and an ellipsis.
+
+`BS_LEFT` was the one-line alternative. It left-aligns the caption, so clipping
+takes from the right and the start survives. It was rejected for saying
+nothing about the cut, and for pushing every short name against the left edge
+to fix a case that only some names hit.
 
 The order is the list position rather than a field on `FtPlace`. `save` writes
 the position out and `load` sorts by what it reads, so the editor gets

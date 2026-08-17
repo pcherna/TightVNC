@@ -171,6 +171,25 @@ protected:
 
   void initPlacesTooltip();
 
+  //
+  // Labels one place button, shortening the name to what the button can show.
+  //
+  // A push button centres its caption and clips both ends, so a long name
+  // came out as its middle, which reads as nothing. The name is measured
+  // against the button and cut back to a leading portion and an ellipsis
+  // instead, so it still reads from the start and says that it was cut.
+  //
+
+  void setPlaceButtonText(Control *button, const TCHAR *name);
+
+  //
+  // Pixels held back from the button width when measuring. A push button
+  // draws its caption inside the border and the focus rectangle, so the
+  // caption never gets the full client width.
+  //
+
+  static const int PLACE_BUTTON_TEXT_MARGIN = 8;
+
   void moveUpLocalFolder();
   void moveUpRemoteFolder() throw(IOException);
 

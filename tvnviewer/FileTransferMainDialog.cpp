@@ -1155,6 +1155,77 @@ void FileTransferMainDialog::initPlacesTooltip()
               reinterpret_cast<LPARAM>(&info));
 }
 
+void FileTransferMainDialog::setPlaceButtonText(Control *button,
+                                                const TCHAR *name)
+{
+  static const TCHAR ELLIPSIS[] = _T("...");
+
+  HWND hwnd = button->getWindow();
+
+  RECT rect;
+  GetClientRect(hwnd, &rect);
+
+  int room = (rect.right - rect.left) - PLACE_BUTTON_TEXT_MARGIN;
+
+  HDC dc = GetDC(hwnd);
+
+  if (dc == 0 || room <= 0) {
+    if (dc != 0) {
+      ReleaseDC(hwnd, dc);
+    }
+    button->setText(name);
+    return;
+  }
+
+  //
+  // Measured in the button's own font. The dialog font is not the system
+  // default, so measuring without it would answer for the wrong typeface.
+  //
+
+  HFONT font = reinterpret_cast<HFONT>(SendMessage(hwnd, WM_GETFONT, 0, 0));
+  HGDIOBJ previous = 0;
+
+  if (font != 0) {
+    previous = SelectObject(dc, font);
+  }
+
+  StringStorage text(name);
+  size_t full = text.getLength();
+
+  SIZE size;
+
+  if (GetTextExtentPoint32(dc, name, static_cast<int>(full), &size) != 0 &&
+      size.cx > room) {
+    //
+    // Shortened one character at a time rather than by estimating from an
+    // average width, because a proportional font makes that estimate wrong
+    // in both directions.
+    //
+
+    text.setString(ELLIPSIS);
+
+    for (size_t keep = full; keep > 0; keep--) {
+      StringStorage candidate(name);
+      candidate.truncate(full - keep);
+      candidate.appendString(ELLIPSIS);
+
+      if (GetTextExtentPoint32(dc, candidate.getString(),
+                               static_cast<int>(candidate.getLength()),
+                               &size) != 0 && size.cx <= room) {
+        text.setString(candidate.getString());
+        break;
+      }
+    }
+  }
+
+  if (previous != 0) {
+    SelectObject(dc, previous);
+  }
+  ReleaseDC(hwnd, dc);
+
+  button->setText(text.getString());
+}
+
 void FileTransferMainDialog::updatePlaceButtons(bool remote)
 {
   const FtPlaces *places = remote ? &m_remotePlaces : &m_localPlaces;
@@ -1164,7 +1235,7 @@ void FileTransferMainDialog::updatePlaceButtons(bool remote)
 
   for (size_t i = 0; i < PLACE_BUTTON_COUNT; i++) {
     if (i < count) {
-      buttons[i].setText(places->getPlace(i)->name.getString());
+      setPlaceButtonText(&buttons[i], places->getPlace(i)->name.getString());
       buttons[i].setVisible(true);
     } else {
       //
