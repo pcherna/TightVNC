@@ -42,6 +42,10 @@ using namespace std;
 // Edits a working copy and writes nothing until OK. Cancel therefore leaves
 // the registry exactly as it was.
 //
+// The order of the places list is the order they appear in, and the first few
+// of them get a button of their own in the file transfer dialog. Up and Down
+// are how a place reaches a button.
+//
 // Saving also drops the cached resolution of every place whose candidates
 // changed, on every host, so that an edit reaches the machines already
 // resolved rather than only the ones never visited.
@@ -95,6 +99,15 @@ private:
   void onRenamePlace();
   void onRemovePlace();
 
+  //
+  // Moves the selected place by one row. The order of this list is the order
+  // the places appear in, and the first few of them get a button of their own
+  // in the file transfer dialog, so this is how a place is promoted onto the
+  // toolbar.
+  //
+
+  void onMovePlace(int delta);
+
   void onAddCandidate();
   void onReplaceCandidate();
   void onRemoveCandidate();
@@ -105,6 +118,35 @@ private:
   //
 
   void onMoveCandidate(int delta);
+
+  //
+  // Handles Enter pressed inside either text box, and returns true when it
+  // did.
+  //
+  // OK is the default button, so Enter would otherwise close the dialog and
+  // throw away whatever was typed. Enter acts on the selection instead: it
+  // renames or replaces the highlighted row, or adds a row when none is
+  // highlighted. Selecting a row copies it into the box, so select, edit,
+  // Enter has to mean rename or replace. Adding there would leave the old row
+  // behind next to a near-duplicate.
+  //
+  // An empty box is left to close the dialog, which is what Enter does
+  // everywhere else in it.
+  //
+
+  bool onTextBoxEnter();
+
+  //
+  // Warns about places holding no candidate paths, and returns true when the
+  // save should go ahead.
+  //
+  // Such a place is not written, because it could never resolve. Dropping it
+  // without a word is the trap this closes: the name sits in the list looking
+  // saved, and comes back gone. Cancel returns to the dialog with the first
+  // offender selected, so the path box is already pointed at the work.
+  //
+
+  bool confirmEmptyPlaces();
 
   void onOkButtonClick();
 
@@ -126,6 +168,13 @@ private:
   //
 
   void getCandidateInput(StringStorage *out);
+
+  //
+  // Reads the name box, normalised to what can be a registry key. A
+  // backslash comes back as a forward slash.
+  //
+
+  void getPlaceNameInput(StringStorage *out);
 
   //
   // Drops the cached resolution of every place whose candidates no longer
@@ -150,6 +199,8 @@ private:
   Control m_addPlaceButton;
   Control m_renamePlaceButton;
   Control m_removePlaceButton;
+  Control m_upPlaceButton;
+  Control m_downPlaceButton;
 
   Control m_addCandidateButton;
   Control m_replaceCandidateButton;

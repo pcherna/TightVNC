@@ -54,6 +54,89 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 - [x] Add the new files to both project formats
 - [x] Build and run the phase 2b manual checks
 
+## Phase 4: places on the toolbar
+
+The first few places of each pane get a button of their own, on a row above
+the path box. Everything else moves behind one button at the end of that row.
+
+- [x] `FtPlaces` stores an `Order` value in each place's key, and `load` sorts
+      by it
+- [x] `save` writes the order from the list position
+- [x] Up and Down for the places list in Edit Places, growing that dialog to
+      320 x 210
+- [x] Four place buttons and an overflow button per pane in `tvnviewer.rc`,
+      on a new row above the path box
+- [x] Grow the file transfer dialog to 503 x 359 and shift everything below
+      the new row down by 19
+- [x] Label the buttons when the dialog opens, and hide the empty slots
+- [x] Menu holds only the places past the fourth, plus Rescan and Edit Places
+- [x] Build and run the phase 4 manual checks
+
+### Phase 4 manual checks
+
+- [x] Open file transfer with no places defined. Each pane shows the arrow
+      button alone. Its menu says "(no places defined)" and offers Edit Places.
+- [x] Define one place. It appears on the first button. The other three stay
+      hidden. The menu holds no place entries and no leading separator.
+- [x] Define six places. Four sit on buttons and two are in the menu.
+- [x] Click each of the four buttons. Each navigates to its own place.
+- [x] Pick a place from the menu. It navigates to the right one, not to an
+      entry four rows off.
+- [x] Select the fifth place in Edit Places, press Up twice, press OK. It
+      moves onto the third button straight away.
+- [x] Check that a name of about twelve characters fits a button without
+      clipping, now that the buttons are 50 units rather than 67.
+- [x] Check that `HKCU\Software\TightVNC\Viewer\FtPlaces\Local\<name>` holds an
+      `Order` value alongside the numbered candidate values.
+- [x] Add a place under that key by hand, with a candidate but no `Order`.
+      Reopen the menu. The place appears last.
+- [x] Confirm the arrow glyph on the overflow button renders as a triangle and
+      is not clipped by the 18 unit button.
+- [x] Check both panes. The buttons line up with the path box on the left and
+      the arrow button meets the right edge.
+- [x] Start a transfer. Every place button greys with the rest of the controls
+      and comes back when the transfer ends.
+- [x] Rescan still appears in the remote menu and not in the local one.
+- [x] Give a place a very long name. The button shows the start of it followed
+      by an ellipsis, and nothing else on the row moves.
+- [x] Give a place a name that only just overflows. One or two characters go
+      and the ellipsis appears, rather than half the name.
+- [x] Give a place a one-word name that fits. It stays centred with no
+      ellipsis.
+- [x] Give a place a name of a single very wide character. The button shows an
+      ellipsis rather than an empty face.
+- [x] Hover a shortened button. The tooltip shows the whole name.
+- [x] Hover a button whose name fits. No tooltip appears.
+- [x] Rename that place to something long, press OK, hover it again. The
+      tooltip appears with the new name.
+- [x] Rename it back to something short and hover again. The tooltip is gone.
+- [x] Remove enough places that a button hides, then hover where it was. No
+      tooltip appears from the empty slot.
+- [x] Reorder places in Edit Places and press OK. The remote pane still uses
+      its cached folders, since order changes no candidate.
+- [x] Confirm the log combo, progress bar and Cancel button sit at the bottom
+      of the taller window without clipping.
+- [x] Name a place `Support\BCF` and give it a candidate. The list shows
+      `Support/BCF` as soon as you press Add. After OK it gets a button, and
+      `FtPlaces\Local` holds one key named `Support/BCF` with no `Support` key
+      beside it.
+- [x] Confirm the stray `Support` key left by the earlier build is gone after
+      that save.
+- [x] Rename a place to one holding a backslash, where the forward slash form
+      already exists. The duplicate warning appears.
+- [x] Add a place name, add no path, press OK. The warning names that place.
+      Press Cancel. The dialog stays open with the place selected and the
+      cursor in the path box.
+- [x] Type a path there and press Enter. It is added. Press OK. The dialog
+      closes with no warning and the place gets a button.
+- [x] Add two places with no paths, press OK, press OK on the warning. Both
+      are dropped and the rest still save.
+- [x] Press Enter on the warning box. It cancels rather than saves.
+- [x] Hover the arrow button on each pane. A "Places" tooltip appears on both.
+- [x] Start a transfer and hover it again. No tooltip, because the button is
+      disabled.
+- [x] Close and reopen the file transfer dialog. The tooltip still works.
+
 ## Domain rules
 
 Accreted as they surface. These are decisions, not guesses.
@@ -94,10 +177,96 @@ Accreted as they surface. These are decisions, not guesses.
 - Saving rewrites a side's definitions wholesale rather than merging, so a
   removed place disappears and no stale candidate numbering survives.
 - A place with no candidates is not written. It could never resolve.
+- The editor warns before dropping one, and names it. The name sits in the
+  list looking saved, so losing it without a word is a trap. The rule is about
+  what reaches the registry, not about how quietly it happens.
+- Cancel on that warning returns to the dialog with the first offender
+  selected and the path box focused, which is where the work is.
+- Cancel is the default button on it. A stray Enter would otherwise discard
+  the very names being warned about.
+- The overflow arrow carries a "Places" tooltip. It shows no words of its own,
+  so what sits behind it has to be said somewhere. The named buttons beside it
+  get none, since each already reads as its own place.
+- The tooltip window is owned by the dialog, so it dies with it. Reopening the
+  file transfer dialog builds a fresh one.
+- `TTF_SUBCLASS` lets the tooltip take the mouse messages itself. A dialog has
+  no message loop of its own to relay them from.
 - `StringStorage::operator =` returns void, so it is not assignable in the
   sense the standard containers ask for. Anything that would shift elements by
   assignment, `vector::erase` and whole-vector assignment both, is written as
   a rebuild through copy construction instead.
+- Enter in a text box beside a list acts on the selection. It renames or
+  replaces the highlighted row, and adds a row when none is highlighted.
+  Selecting a row copies it into the box, so select, edit, Enter has to mean
+  rename or replace. Adding there would leave the old row behind next to a
+  near-duplicate.
+- Enter in an empty box closes the dialog, which is what it does everywhere
+  else in it. Enter is swallowed when the action refuses, a duplicate for
+  instance, because closing on the back of a refusal is the same loss the fix
+  exists to prevent.
+- Places have an order the user sets, held in an `Order` value inside each
+  place's key. Registry enumeration is alphabetical, which is not an order
+  anyone chose, and the buttons make the first few places matter.
+- The candidate values are numbers and `Order` is a word, so the two names
+  cannot collide inside the same key.
+- A place with no `Order` value sorts after every place that has one, keeping
+  its alphabetical position among the others. A place added to the registry by
+  hand appears at the end rather than displacing a button.
+- Order is written from the list position, counted over the places actually
+  written. A place skipped for having no candidates leaves no gap.
+- The buttons act on the places as they were last read, without rereading
+  first. A button always goes where its own label says.
+- The menu is the only thing that rereads, and it relabels the buttons when it
+  does. That keeps the promise that a registry edit shows up without a
+  restart.
+- An empty button slot is hidden, not greyed. A greyed button with no caption
+  says a place is there but unavailable, which is not what an empty slot means.
+- The menu holds only the places past the fourth. Repeating the ones already on
+  buttons would make the row look like it had failed to take them.
+- The menu has no separator when every place is on a button, because nothing
+  sits above it to separate.
+- The menu is right aligned on its button, which sits at the right edge of the
+  pane. A left aligned menu would hang off the window.
+- Place buttons are a fixed width. Equal widths keep the two panes in step.
+- A name too long for its button is cut back to a leading portion and an
+  ellipsis. A push button centres its caption and clips both ends, so the
+  untouched name came out as its middle, which reads as nothing. The start of
+  a name is the part that identifies it.
+- The name is measured against the button rather than cut at a character
+  count. The dialog font is proportional, so a character count would be wrong
+  in both directions.
+- Measuring selects the button's own font into the DC first. The dialog font
+  is not the system default, so measuring without it would answer for the
+  wrong typeface.
+- A shortened button carries the full name on a tooltip. A name the button
+  shows in full carries none, because repeating it would be noise.
+- Every place button joins the tooltip as a tool at startup and is given its
+  text later. A tool holding an empty string shows nothing, so an unused slot
+  and an untruncated name need no adding or removing.
+- The tooltip is built before the buttons are first labelled, since labelling
+  a button also decides whether that button needs a tip.
+- Tooltip text is held in a member per button. The tooltip keeps the pointer
+  it is given rather than copying the string, so the text has to outlive the
+  call, and anything that rewrites it must hand the new pointer over straight
+  afterwards.
+- Reordering places invalidates no cached resolution. The cache is keyed by
+  place name and turns on the candidates, and order touches neither.
+- A backslash in a place name becomes a forward slash. The registry API reads
+  a backslash in a key name as a path separator and offers no escape, so
+  "Support\BCF" became a key "Support" holding a key "BCF", neither carrying
+  candidates. Both then vanished, because a place with no candidates is
+  skipped on load.
+- Forward slash is legal in a registry key name, unlike in a file name, so it
+  is a real substitute rather than a mangling. It also reads the same way to a
+  person.
+- Names are normalised where they are typed, not only where they are saved.
+  The list, the duplicate check and the per-host resolved-answer cache all key
+  on the name, and a name spelled two ways would miss the cache.
+- `save` normalises again rather than trusting its caller, because a backslash
+  reaching `RegCreateKeyEx` produces a nested key and nothing downstream
+  reports it.
+- Saving deletes every existing subkey tree first, so a nested key left by an
+  earlier build disappears the next time the editor writes.
 
 ## Review
 
@@ -120,3 +289,80 @@ race with `executeOperation` deleting the operation that just finished. It does
 not. `FileTransferMessageProcessor::processRfbMessage` holds its listener lock
 across the whole dispatch, and `executeOperation` blocks on that same lock
 before it deletes. The delete cannot overlap the notify.
+
+### Phase 4
+
+Built. The manual checks are still running.
+
+The first check found a bug older than this phase. A place named `Support\BCF`
+never appeared. The registry API reads a backslash in a key name as a path
+separator, so `save` made a key `Support` holding a key `BCF`, and `load`
+skipped both for having no candidates. Nothing reported it. Place names are now
+rewritten to forward slash, which the registry does allow in a key name, at the
+point they are typed and again in `save`.
+
+Normalising at input rather than only at save is what keeps the per-host
+resolved-answer cache working. That cache is keyed by place name, and holds it
+as a value name rather than a key name, so a backslash was legal there and the
+two spellings would have missed each other.
+
+The same check turned up a second silent loss standing beside the first. A
+place with no candidate paths is dropped on save, by a rule that is right in
+itself, but it went without a word. The editor now names those places on OK
+and offers to go back. The rule governs what reaches the registry, not how
+quietly it happens.
+
+Putting places on buttons forced a question the feature had dodged. There was
+no order. `load` returned whatever the registry enumeration gave back, which is
+alphabetical by name. Buttons make the first few places matter, so promoting a
+place would have meant renaming it. An `Order` value per place and Up and Down
+in the editor fix that, and the menu shows the same order.
+
+The row carries four buttons. It started at three of 67 dialog units, which
+left the pane wider than it needed to be. Four of 50 with two units between
+them fill the same 206 units, and 50 units is about twelve characters. Only
+`PLACE_BUTTON_COUNT`, the resource, and the command switch know the number.
+
+Narrower buttons made the clipping visible. A push button centres its caption
+and clips both ends, so a long name came out as its middle, which identifies
+nothing. Names are now measured against the button and cut back to a leading
+portion and an ellipsis.
+
+`BS_LEFT` was the one-line alternative. It left-aligns the caption, so clipping
+takes from the right and the start survives. It was rejected for saying
+nothing about the cut, and for pushing every short name against the left edge
+to fix a case that only some names hit.
+
+Shortening a name hides the rest of it, so a shortened button now carries the
+whole name on the tooltip already serving the two arrows. Buttons whose names
+fit carry none. Every button joins as a tool at startup and is given its text
+afterwards, because a tool holding an empty string shows nothing, which saves
+adding and removing tools as places come and go.
+
+The order is the list position rather than a field on `FtPlace`. `save` writes
+the position out and `load` sorts by what it reads, so the editor gets
+reordering for free from the vector it already holds.
+
+Sorting needed care. `StringStorage` assignment returns void, so `std::sort`
+cannot be pointed at a `vector<FtPlace>`. `load` sorts a vector of
+(order, position read) pairs instead and rebuilds the list from that. Ties keep
+the alphabetical order the registry handed back, which is what puts unordered
+places at the end in a sensible sequence. `swapPlaces` in the editor rebuilds
+through copy construction for the same reason `erasePlace` does.
+
+Two things the layout change dragged in. The transfer arrows are centred
+against the file lists, so they moved down by the same 19 units as everything
+else. The overflow menu is right aligned now, since its button sits at the
+right edge of the pane rather than the left.
+
+The arrow glyph on the overflow button is the one thing that cannot be checked
+from here. It is U+25BC in a UTF-16 resource file, and Ms Shell Dlg 2 should
+have it, but the manual checks look at it.
+
+[x] Local-side places buttons missing?
+[x] Places arrow-dropdown needs a tooltip
+
+[ ] In the "File already exists" dialog, X doesn't seem to do anything
+
+[ ] Think about moving the overwrite options into the transfer window
+[ ] Upload confirmation should also be gated on the overwrite setting

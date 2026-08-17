@@ -70,6 +70,33 @@ static void erasePlace(vector<FtPlace> *places, size_t index)
 }
 
 //
+// Exchanges two places, rebuilt through copy construction for the same reason
+// erasePlace is. StringStorage assignment returns void, so an FtPlace cannot
+// be shifted about by the standard algorithms.
+//
+
+static void swapPlaces(vector<FtPlace> *places, size_t a, size_t b)
+{
+  vector<FtPlace> rebuilt;
+
+  for (size_t i = 0; i < places->size(); i++) {
+    size_t take = i;
+
+    if (i == a) {
+      take = b;
+    } else if (i == b) {
+      take = a;
+    }
+    rebuilt.push_back(places->at(take));
+  }
+
+  places->clear();
+  for (size_t i = 0; i < rebuilt.size(); i++) {
+    places->push_back(rebuilt.at(i));
+  }
+}
+
+//
 // True when two places list exactly the same candidates in the same order.
 // Order matters, because it decides which path wins.
 //
@@ -125,6 +152,8 @@ void FtEditPlacesDialog::initControls()
   m_addPlaceButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_ADD_PLACE));
   m_renamePlaceButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_RENAME_PLACE));
   m_removePlaceButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_REMOVE_PLACE));
+  m_upPlaceButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_UP_PLACE));
+  m_downPlaceButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_DOWN_PLACE));
 
   m_addCandidateButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_ADD_CAND));
   m_replaceCandidateButton.setWindow(GetDlgItem(hwnd, IDC_FTEP_REPLACE_CAND));
@@ -171,6 +200,12 @@ BOOL FtEditPlacesDialog::onCommand(UINT controlID, UINT notificationID)
   case IDC_FTEP_REMOVE_PLACE:
     onRemovePlace();
     break;
+  case IDC_FTEP_UP_PLACE:
+    onMovePlace(-1);
+    break;
+  case IDC_FTEP_DOWN_PLACE:
+    onMovePlace(1);
+    break;
   case IDC_FTEP_ADD_CAND:
     onAddCandidate();
     break;
@@ -187,7 +222,9 @@ BOOL FtEditPlacesDialog::onCommand(UINT controlID, UINT notificationID)
     onMoveCandidate(1);
     break;
   case IDOK:
-    onOkButtonClick();
+    if (!onTextBoxEnter()) {
+      onOkButtonClick();
+    }
     break;
   case IDCANCEL:
     kill(IDCANCEL);
@@ -303,9 +340,13 @@ void FtEditPlacesDialog::updateButtons()
   bool haveName = !typedName.isEmpty();
   bool havePath = !typedPath.isEmpty();
 
+  int placeCount = static_cast<int>(m_working.size());
+
   m_addPlaceButton.setEnabled(haveName);
   m_renamePlaceButton.setEnabled(havePlace && haveName);
   m_removePlaceButton.setEnabled(havePlace);
+  m_upPlaceButton.setEnabled(havePlace && place > 0);
+  m_downPlaceButton.setEnabled(havePlace && place < placeCount - 1);
 
   m_addCandidateButton.setEnabled(havePlace && havePath);
   m_replaceCandidateButton.setEnabled(haveCandidate && havePath);
@@ -336,10 +377,18 @@ void FtEditPlacesDialog::getCandidateInput(StringStorage *out)
   FtPlaces::normalizePath(&typed, m_remote, out);
 }
 
+void FtEditPlacesDialog::getPlaceNameInput(StringStorage *out)
+{
+  StringStorage typed;
+  m_placeNameBox.getText(&typed);
+
+  FtPlaces::normalizeName(&typed, out);
+}
+
 void FtEditPlacesDialog::onAddPlace()
 {
   StringStorage name;
-  m_placeNameBox.getText(&name);
+  getPlaceNameInput(&name);
 
   //
   // The button is disabled while the box is empty, so this only guards
@@ -371,7 +420,7 @@ void FtEditPlacesDialog::onRenamePlace()
   }
 
   StringStorage name;
-  m_placeNameBox.getText(&name);
+  getPlaceNameInput(&name);
 
   //
   // The button is disabled while the box is empty, so this only guards
@@ -403,6 +452,25 @@ void FtEditPlacesDialog::onRemovePlace()
   erasePlace(&m_working, static_cast<size_t>(place));
 
   fillPlacesList(place);
+}
+
+void FtEditPlacesDialog::onMovePlace(int delta)
+{
+  int place = getSelectedPlace();
+  if (place < 0) {
+    return;
+  }
+
+  int target = place + delta;
+
+  if (target < 0 || target >= static_cast<int>(m_working.size())) {
+    return;
+  }
+
+  swapPlaces(&m_working, static_cast<size_t>(place),
+             static_cast<size_t>(target));
+
+  fillPlacesList(target);
 }
 
 void FtEditPlacesDialog::onAddCandidate()
@@ -531,8 +599,119 @@ void FtEditPlacesDialog::forgetChangedPlaces()
   }
 }
 
+bool FtEditPlacesDialog::onTextBoxEnter()
+{
+  HWND focus = GetFocus();
+
+  if (focus == m_placeNameBox.getWindow()) {
+    StringStorage typed;
+    m_placeNameBox.getText(&typed);
+
+    if (typed.isEmpty()) {
+      return false;
+    }
+
+    if (getSelectedPlace() >= 0) {
+      onRenamePlace();
+    } else {
+      onAddPlace();
+    }
+    return true;
+  }
+
+  if (focus == m_candidatePathBox.getWindow()) {
+    StringStorage typed;
+    m_candidatePathBox.getText(&typed);
+
+    if (typed.isEmpty()) {
+      return false;
+    }
+
+    //
+    // A candidate belongs to a place, so with none selected there is nothing
+    // Enter could do. The Add button is disabled in that state too, and
+    // swallowing the key keeps the typed path rather than closing on it.
+    //
+
+    if (getSelectedPlace() < 0) {
+      return true;
+    }
+
+    if (m_candidatesList.getSelectedIndex() >= 0) {
+      onReplaceCandidate();
+    } else {
+      onAddCandidate();
+    }
+    return true;
+  }
+
+  return false;
+}
+
+bool FtEditPlacesDialog::confirmEmptyPlaces()
+{
+  int firstEmpty = -1;
+  int count = 0;
+
+  StringStorage names;
+
+  for (size_t i = 0; i < m_working.size(); i++) {
+    if (!m_working.at(i).candidates.empty()) {
+      continue;
+    }
+
+    if (firstEmpty < 0) {
+      firstEmpty = static_cast<int>(i);
+    }
+    count++;
+
+    names.appendString(_T("\r\n    "));
+    names.appendString(m_working.at(i).name.getString());
+  }
+
+  if (count == 0) {
+    return true;
+  }
+
+  StringStorage message;
+
+  if (count == 1) {
+    message.format(_T("This place has no candidate paths, so it will not be ")
+                   _T("saved:\r\n%s\r\n\r\nPress Cancel to go back and add a ")
+                   _T("path, or OK to save without it."),
+                   names.getString());
+  } else {
+    message.format(_T("These places have no candidate paths, so they will not ")
+                   _T("be saved:\r\n%s\r\n\r\nPress Cancel to go back and add ")
+                   _T("paths, or OK to save without them."),
+                   names.getString());
+  }
+
+  //
+  // Cancel is the default. A stray Enter on this box would otherwise throw
+  // away the very names it is warning about.
+  //
+
+  int answer = MessageBox(m_ctrlThis.getWindow(), message.getString(),
+                          _T("Edit Places"),
+                          MB_OKCANCEL | MB_ICONWARNING | MB_DEFBUTTON2);
+
+  if (answer == IDOK) {
+    return true;
+  }
+
+  fillPlacesList(firstEmpty);
+  m_candidatePathBox.setFocus();
+
+  return false;
+}
+
 void FtEditPlacesDialog::onOkButtonClick()
 {
+  if (!confirmEmptyPlaces()) {
+    return;
+  }
+
   forgetChangedPlaces();
 
   m_places.save(&m_working);

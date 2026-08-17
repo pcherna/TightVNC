@@ -47,7 +47,8 @@ FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core,
   m_chainGeneration(0),
   m_chainFiredGeneration(0),
   m_localPlaces(RegistryPaths::VIEWER_PATH, false),
-  m_remotePlaces(RegistryPaths::VIEWER_PATH, true)
+  m_remotePlaces(RegistryPaths::VIEWER_PATH, true),
+  m_placesTooltip(0)
 {
   setResourceId(ftclient_mainDialog);
 
@@ -106,7 +107,15 @@ BOOL FileTransferMainDialog::onInitDialog()
   restoreRemoteFolder();
   restoreLocalFolder();
 
-  return TRUE;
+  //
+  // The places row sits at the top of the tab order now, so the dialog would
+  // otherwise open with a place button focused. Returning FALSE says the
+  // focus has already been placed.
+  //
+
+  m_localFileListView.setFocus();
+
+  return FALSE;
 }
 
 BOOL FileTransferMainDialog::onNotify(UINT controlID, LPARAM data)
@@ -210,11 +219,35 @@ BOOL FileTransferMainDialog::onCommand(UINT controlID, UINT notificationID)
   case IDC_DOWNLOAD_BUTTON:
     onDownloadButtonClick();
     break;
-  case IDC_LOCAL_PLACES_BUTTON:
-    onPlacesButtonClick(false);
+  case IDC_LOCAL_PLACE1_BUTTON:
+    onPlaceButtonClick(false, 0);
     break;
-  case IDC_REMOTE_PLACES_BUTTON:
-    onPlacesButtonClick(true);
+  case IDC_LOCAL_PLACE2_BUTTON:
+    onPlaceButtonClick(false, 1);
+    break;
+  case IDC_LOCAL_PLACE3_BUTTON:
+    onPlaceButtonClick(false, 2);
+    break;
+  case IDC_LOCAL_PLACE4_BUTTON:
+    onPlaceButtonClick(false, 3);
+    break;
+  case IDC_REMOTE_PLACE1_BUTTON:
+    onPlaceButtonClick(true, 0);
+    break;
+  case IDC_REMOTE_PLACE2_BUTTON:
+    onPlaceButtonClick(true, 1);
+    break;
+  case IDC_REMOTE_PLACE3_BUTTON:
+    onPlaceButtonClick(true, 2);
+    break;
+  case IDC_REMOTE_PLACE4_BUTTON:
+    onPlaceButtonClick(true, 3);
+    break;
+  case IDC_LOCAL_PLACES_MORE_BUTTON:
+    onPlacesMoreButtonClick(false);
+    break;
+  case IDC_REMOTE_PLACES_MORE_BUTTON:
+    onPlacesMoreButtonClick(true);
     break;
   }
   return TRUE;
@@ -788,8 +821,13 @@ void FileTransferMainDialog::enableControls(bool enabled)
   m_uploadButton.setEnabled(enabled && m_ftCore->getSupportedOps().isUploadSupported());
   m_downloadButton.setEnabled(enabled && m_ftCore->getSupportedOps().isDownloadSupported());
 
-  m_localPlacesButton.setEnabled(enabled);
-  m_remotePlacesButton.setEnabled(enabled);
+  for (size_t i = 0; i < PLACE_BUTTON_COUNT; i++) {
+    m_localPlaceButtons[i].setEnabled(enabled);
+    m_remotePlaceButtons[i].setEnabled(enabled);
+  }
+
+  m_localPlacesMoreButton.setEnabled(enabled);
+  m_remotePlacesMoreButton.setEnabled(enabled);
 
   m_localFileListView.setEnabled(enabled);
   m_remoteFileListView.setEnabled(enabled);
@@ -814,8 +852,26 @@ void FileTransferMainDialog::initControls()
   m_uploadButton.setWindow(GetDlgItem(hwnd, IDC_UPLOAD_BUTTON));
   m_downloadButton.setWindow(GetDlgItem(hwnd, IDC_DOWNLOAD_BUTTON));
 
-  m_localPlacesButton.setWindow(GetDlgItem(hwnd, IDC_LOCAL_PLACES_BUTTON));
-  m_remotePlacesButton.setWindow(GetDlgItem(hwnd, IDC_REMOTE_PLACES_BUTTON));
+  static const UINT localPlaceIds[PLACE_BUTTON_COUNT] = {
+    IDC_LOCAL_PLACE1_BUTTON,
+    IDC_LOCAL_PLACE2_BUTTON,
+    IDC_LOCAL_PLACE3_BUTTON,
+    IDC_LOCAL_PLACE4_BUTTON
+  };
+  static const UINT remotePlaceIds[PLACE_BUTTON_COUNT] = {
+    IDC_REMOTE_PLACE1_BUTTON,
+    IDC_REMOTE_PLACE2_BUTTON,
+    IDC_REMOTE_PLACE3_BUTTON,
+    IDC_REMOTE_PLACE4_BUTTON
+  };
+
+  for (size_t i = 0; i < PLACE_BUTTON_COUNT; i++) {
+    m_localPlaceButtons[i].setWindow(GetDlgItem(hwnd, localPlaceIds[i]));
+    m_remotePlaceButtons[i].setWindow(GetDlgItem(hwnd, remotePlaceIds[i]));
+  }
+
+  m_localPlacesMoreButton.setWindow(GetDlgItem(hwnd, IDC_LOCAL_PLACES_MORE_BUTTON));
+  m_remotePlacesMoreButton.setWindow(GetDlgItem(hwnd, IDC_REMOTE_PLACES_MORE_BUTTON));
 
   m_cancelButton.setWindow(GetDlgItem(hwnd, IDC_CANCEL_BUTTON));
 
@@ -831,6 +887,25 @@ void FileTransferMainDialog::initControls()
   m_remoteFileListView.setWindow(GetDlgItem(hwnd, IDC_REMOTE_FILE_LIST));
 
   m_fileExistDialog.setParent(&m_ctrlThis);
+
+  //
+  // The tooltip goes up first, because labelling a button also decides
+  // whether that button needs one.
+  //
+
+  initPlacesTooltip();
+
+  //
+  // Read once here so the place buttons can be labelled. Every later read
+  // happens when the menu is opened, which is also where the labels are
+  // brought up to date.
+  //
+
+  m_localPlaces.load();
+  m_remotePlaces.load();
+
+  updatePlaceButtons(false);
+  updatePlaceButtons(true);
 }
 
 void FileTransferMainDialog::raise(Exception &ex)
@@ -1030,15 +1105,254 @@ void FileTransferMainDialog::onRemoteChainReply(bool listed)
   endRemoteChain();
 }
 
-void FileTransferMainDialog::onPlacesButtonClick(bool remote)
+void FileTransferMainDialog::initPlacesTooltip()
+{
+  //
+  // Held in a static because the tooltip keeps the pointer it is given rather
+  // than copying the string.
+  //
+
+  static TCHAR placesText[] = _T("Places");
+
+  //
+  // Tooltips come from the bar classes, which nothing in this dialog would
+  // otherwise pull in. The call costs nothing when they are already up.
+  //
+
+  INITCOMMONCONTROLSEX icc;
+  icc.dwSize = sizeof(icc);
+  icc.dwICC = ICC_BAR_CLASSES;
+  InitCommonControlsEx(&icc);
+
+  HWND hwnd = m_ctrlThis.getWindow();
+
+  m_placesTooltip = CreateWindowEx(0, TOOLTIPS_CLASS, 0,
+                                   WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
+                                   CW_USEDEFAULT, CW_USEDEFAULT,
+                                   CW_USEDEFAULT, CW_USEDEFAULT,
+                                   hwnd, 0, GetModuleHandle(0), 0);
+
+  if (m_placesTooltip == 0) {
+    return;
+  }
+
+  TOOLINFO info;
+  memset(&info, 0, sizeof(info));
+
+  info.cbSize = sizeof(info);
+
+  //
+  // TTF_SUBCLASS lets the tooltip pick the mouse messages up itself. Without
+  // it the dialog would have to relay every one, and a dialog has no message
+  // loop of its own to do that in.
+  //
+
+  info.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+  info.hwnd = hwnd;
+  info.lpszText = placesText;
+
+  info.uId = reinterpret_cast<UINT_PTR>(m_localPlacesMoreButton.getWindow());
+  SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
+              reinterpret_cast<LPARAM>(&info));
+
+  info.uId = reinterpret_cast<UINT_PTR>(m_remotePlacesMoreButton.getWindow());
+  SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
+              reinterpret_cast<LPARAM>(&info));
+
+  //
+  // The place buttons join as tools now and get their text later, once the
+  // places are read. A tool carrying an empty string shows nothing, which is
+  // what an untruncated name and an unused slot both want.
+  //
+
+  info.lpszText = _T("");
+
+  for (size_t i = 0; i < PLACE_BUTTON_COUNT; i++) {
+    info.uId = reinterpret_cast<UINT_PTR>(m_localPlaceButtons[i].getWindow());
+    SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
+                reinterpret_cast<LPARAM>(&info));
+
+    info.uId = reinterpret_cast<UINT_PTR>(m_remotePlaceButtons[i].getWindow());
+    SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
+                reinterpret_cast<LPARAM>(&info));
+  }
+}
+
+void FileTransferMainDialog::setPlaceButtonTip(bool remote, size_t slot,
+                                               const TCHAR *text)
+{
+  if (m_placesTooltip == 0) {
+    return;
+  }
+
+  //
+  // The tooltip keeps the pointer it is given rather than copying the string,
+  // so the text is stored first and the pointer handed over second. Anything
+  // that rewrites one of these must send this message again.
+  //
+
+  StringStorage *held = remote ? &m_remotePlaceTips[slot]
+                               : &m_localPlaceTips[slot];
+  held->setString(text);
+
+  Control *button = remote ? &m_remotePlaceButtons[slot]
+                           : &m_localPlaceButtons[slot];
+
+  TOOLINFO info;
+  memset(&info, 0, sizeof(info));
+
+  info.cbSize = sizeof(info);
+  info.uFlags = TTF_IDISHWND;
+  info.hwnd = m_ctrlThis.getWindow();
+  info.uId = reinterpret_cast<UINT_PTR>(button->getWindow());
+  info.lpszText = const_cast<TCHAR *>(held->getString());
+
+  SendMessage(m_placesTooltip, TTM_UPDATETIPTEXT, 0,
+              reinterpret_cast<LPARAM>(&info));
+}
+
+bool FileTransferMainDialog::setPlaceButtonText(Control *button,
+                                                const TCHAR *name)
+{
+  static const TCHAR ELLIPSIS[] = _T("...");
+
+  HWND hwnd = button->getWindow();
+
+  RECT rect;
+  GetClientRect(hwnd, &rect);
+
+  int room = (rect.right - rect.left) - PLACE_BUTTON_TEXT_MARGIN;
+
+  HDC dc = GetDC(hwnd);
+
+  if (dc == 0 || room <= 0) {
+    if (dc != 0) {
+      ReleaseDC(hwnd, dc);
+    }
+    button->setText(name);
+    return false;
+  }
+
+  //
+  // Measured in the button's own font. The dialog font is not the system
+  // default, so measuring without it would answer for the wrong typeface.
+  //
+
+  HFONT font = reinterpret_cast<HFONT>(SendMessage(hwnd, WM_GETFONT, 0, 0));
+  HGDIOBJ previous = 0;
+
+  if (font != 0) {
+    previous = SelectObject(dc, font);
+  }
+
+  StringStorage text(name);
+  size_t full = text.getLength();
+
+  bool truncated = false;
+
+  SIZE size;
+
+  if (GetTextExtentPoint32(dc, name, static_cast<int>(full), &size) != 0 &&
+      size.cx > room) {
+    truncated = true;
+
+    //
+    // Shortened one character at a time rather than by estimating from an
+    // average width, because a proportional font makes that estimate wrong
+    // in both directions.
+    //
+
+    text.setString(ELLIPSIS);
+
+    for (size_t keep = full; keep > 0; keep--) {
+      StringStorage candidate(name);
+      candidate.truncate(full - keep);
+      candidate.appendString(ELLIPSIS);
+
+      if (GetTextExtentPoint32(dc, candidate.getString(),
+                               static_cast<int>(candidate.getLength()),
+                               &size) != 0 && size.cx <= room) {
+        text.setString(candidate.getString());
+        break;
+      }
+    }
+  }
+
+  if (previous != 0) {
+    SelectObject(dc, previous);
+  }
+  ReleaseDC(hwnd, dc);
+
+  button->setText(text.getString());
+
+  return truncated;
+}
+
+void FileTransferMainDialog::updatePlaceButtons(bool remote)
+{
+  const FtPlaces *places = remote ? &m_remotePlaces : &m_localPlaces;
+  Control *buttons = remote ? m_remotePlaceButtons : m_localPlaceButtons;
+
+  size_t count = places->getCount();
+
+  for (size_t i = 0; i < PLACE_BUTTON_COUNT; i++) {
+    if (i < count) {
+      const TCHAR *name = places->getPlace(i)->name.getString();
+
+      //
+      // The tooltip carries the name only when the button could not show all
+      // of it. Repeating a name the user can already read would be noise.
+      //
+
+      bool truncated = setPlaceButtonText(&buttons[i], name);
+
+      setPlaceButtonTip(remote, i, truncated ? name : _T(""));
+
+      buttons[i].setVisible(true);
+    } else {
+      //
+      // Cleared as well as hidden, so a name cannot flash back if the button
+      // is shown again before it has been relabelled.
+      //
+
+      buttons[i].setText(_T(""));
+      setPlaceButtonTip(remote, i, _T(""));
+      buttons[i].setVisible(false);
+    }
+  }
+}
+
+void FileTransferMainDialog::onPlaceButtonClick(bool remote, size_t slot)
+{
+  const FtPlaces *places = remote ? &m_remotePlaces : &m_localPlaces;
+
+  //
+  // A hidden button cannot be clicked, so this only guards against the
+  // labelling and the places falling out of step.
+  //
+
+  if (slot >= places->getCount()) {
+    return;
+  }
+
+  if (remote) {
+    goToRemotePlace(places->getPlace(slot));
+  } else {
+    goToLocalPlace(places->getPlace(slot));
+  }
+}
+
+void FileTransferMainDialog::onPlacesMoreButtonClick(bool remote)
 {
   //
   // Reread every time, so places edited in the registry show up without
-  // restarting the viewer.
+  // restarting the viewer. The buttons follow, since this is the only place
+  // that rereads.
   //
 
   FtPlaces *places = remote ? &m_remotePlaces : &m_localPlaces;
   places->load();
+  updatePlaceButtons(remote);
 
   Menu menu;
   menu.createPopupMenu();
@@ -1048,19 +1362,28 @@ void FileTransferMainDialog::onPlacesButtonClick(bool remote)
   if (count == 0) {
     //
     // Command id zero is what a dismissed menu returns, so this entry is
-    // inert without needing to be greyed.
+    // inert without needing to be greyed. It is worth saying, because with no
+    // places there are no buttons either and the row looks broken otherwise.
     //
 
     StringStorage empty(_T("(no places defined)"));
     menu.appendMenu(empty, PLACES_MENU_NONE);
-  } else {
-    for (size_t i = 0; i < count; i++) {
+    menu.appendSeparator();
+  } else if (count > PLACE_BUTTON_COUNT) {
+    //
+    // Only what did not fit on the buttons. Repeating the first few here
+    // would make the row look like it had failed to take them.
+    //
+    // Every place on a button leaves this menu with nothing of its own, and
+    // so with nothing for a separator to separate.
+    //
+
+    for (size_t i = PLACE_BUTTON_COUNT; i < count; i++) {
       menu.appendMenu(places->getPlace(i)->name,
                       static_cast<UINT>(PLACES_MENU_FIRST_PLACE + i));
     }
+    menu.appendSeparator();
   }
-
-  menu.appendSeparator();
 
   //
   // Only remote resolutions are cached, so only that pane needs a rescan.
@@ -1075,13 +1398,19 @@ void FileTransferMainDialog::onPlacesButtonClick(bool remote)
   StringStorage edit(_T("Edit Places..."));
   menu.appendMenu(edit, PLACES_MENU_EDIT);
 
-  Control *button = remote ? &m_remotePlacesButton : &m_localPlacesButton;
+  Control *button = remote ? &m_remotePlacesMoreButton
+                           : &m_localPlacesMoreButton;
   RECT buttonRect;
   GetWindowRect(button->getWindow(), &buttonRect);
 
+  //
+  // Right aligned, because the button sits at the right edge of its pane and
+  // a left aligned menu would hang off it.
+  //
+
   int action = TrackPopupMenu(menu.getMenu(),
-                              TPM_NONOTIFY | TPM_RETURNCMD | TPM_LEFTALIGN,
-                              buttonRect.left, buttonRect.bottom,
+                              TPM_NONOTIFY | TPM_RETURNCMD | TPM_RIGHTALIGN,
+                              buttonRect.right, buttonRect.bottom,
                               0, m_ctrlThis.getWindow(), NULL);
 
   if (action == PLACES_MENU_NONE) {
@@ -1096,6 +1425,7 @@ void FileTransferMainDialog::onPlacesButtonClick(bool remote)
 
     if (editor.showModal() == IDOK) {
       places->load();
+      updatePlaceButtons(remote);
     }
     return;
   }

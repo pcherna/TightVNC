@@ -26,6 +26,11 @@
 
 #include "win-system/Registry.h"
 
+#include <algorithm>
+#include <utility>
+
+const TCHAR FtPlaces::ORDER_VALUE[] = _T("Order");
+
 void FtPlaces::normalizePath(const StringStorage *in, bool remote,
                              StringStorage *out)
 {
@@ -40,6 +45,23 @@ void FtPlaces::normalizePath(const StringStorage *in, bool remote,
 
     if (c == _T('/') || c == _T('\\')) {
       c = wanted;
+    }
+    out->appendChar(c);
+  }
+}
+
+void FtPlaces::normalizeName(const StringStorage *in, StringStorage *out)
+{
+  const TCHAR *chars = in->getString();
+  size_t length = in->getLength();
+
+  out->setString(_T(""));
+
+  for (size_t i = 0; i < length; i++) {
+    TCHAR c = chars[i];
+
+    if (c == _T('\\')) {
+      c = _T('/');
     }
     out->appendChar(c);
   }
@@ -74,6 +96,26 @@ void FtPlaces::load()
     return;
   }
 
+  //
+  // A place with no Order value sorts after every place that has one. Nothing
+  // real reaches this order, so it stands in for "unordered" without needing
+  // a second flag.
+  //
+
+  const int UNORDERED = 0x7fffffff;
+
+  vector<FtPlace> loaded;
+
+  //
+  // Sorted as (order, position read), so places that share an order, and the
+  // unordered ones as a group, keep the alphabetical order the registry
+  // enumeration handed back. Sorting these pairs rather than the places
+  // themselves also keeps FtPlace out of an algorithm that would assign it,
+  // which StringStorage does not support.
+  //
+
+  vector< pair<int, size_t> > sortKeys;
+
   for (size_t i = 0; i < count; i++) {
     RegistryKey placeKey(&m_key, names[i].getString(), false);
     if (!placeKey.isOpened()) {
@@ -96,9 +138,22 @@ void FtPlaces::load()
       place.candidates.push_back(normalized);
     }
 
-    if (!place.candidates.empty()) {
-      m_places.push_back(place);
+    if (place.candidates.empty()) {
+      continue;
     }
+
+    int stored = 0;
+    int order = placeKey.getValueAsInt32(ORDER_VALUE, &stored) ? stored
+                                                               : UNORDERED;
+
+    sortKeys.push_back(make_pair(order, loaded.size()));
+    loaded.push_back(place);
+  }
+
+  std::sort(sortKeys.begin(), sortKeys.end());
+
+  for (size_t i = 0; i < sortKeys.size(); i++) {
+    m_places.push_back(loaded.at(sortKeys.at(i).second));
   }
 }
 
@@ -123,6 +178,14 @@ void FtPlaces::save(const vector<FtPlace> *places)
 
   StringStorage valueName;
 
+  //
+  // Counted over the places actually written rather than over the input, so
+  // that a place skipped for having no candidates leaves no gap in the
+  // numbering.
+  //
+
+  int order = 0;
+
   for (size_t i = 0; i < places->size(); i++) {
     const FtPlace *place = &places->at(i);
 
@@ -130,7 +193,16 @@ void FtPlaces::save(const vector<FtPlace> *places)
       continue;
     }
 
-    RegistryKey placeKey(&m_key, place->name.getString(), true);
+    //
+    // Normalised again here rather than trusted from the caller, because a
+    // backslash reaching RegCreateKeyEx makes a nested key rather than a
+    // place, and nothing downstream would report it.
+    //
+
+    StringStorage keyName;
+    normalizeName(&place->name, &keyName);
+
+    RegistryKey placeKey(&m_key, keyName.getString(), true);
     if (!placeKey.isOpened()) {
       continue;
     }
@@ -140,6 +212,9 @@ void FtPlaces::save(const vector<FtPlace> *places)
       placeKey.setValueAsString(valueName.getString(),
                                 place->candidates.at(c).getString());
     }
+
+    placeKey.setValueAsInt32(ORDER_VALUE, order);
+    order++;
   }
 
   load();
