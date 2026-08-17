@@ -6,6 +6,16 @@ A fork of TightVNC for Windows. A huge shout-out to Konstantin Kaplinskiy and Gl
 
 The improvements are to the user-interface and not to the underlying remote access / control technology, avoiding those more sensitive areas. Claude Opus 5 was used in development.
 
+## Download
+
+Get the latest `tightvnc-viewer-<version>-x64.zip` from the [Releases page](https://github.com/pcherna/TightVNC/releases). Unzip it and run `tvnviewer.exe`. There is no installer and nothing to register. A 32-bit build is there too if you need one.
+
+Releases carry the viewer only. Use the stock TightVNC server, which this fork does not change.
+
+The exe is unsigned, so Windows SmartScreen warns you the first time. Click "More info", then "Run anyway". Check the SHA-256 hash against the release notes if you want to be sure of what you downloaded.
+
+The viewer reads and writes the same registry keys as stock TightVNC, under `HKCU\Software\TightVNC\Viewer`. Your existing connection history and settings carry over. So do any changes you make here, if you go back to the stock viewer.
+
 ## Changes
 
 * The File Transfer dialog remembers the last-visited local and remote folders, on a per-host basis.
@@ -23,12 +33,18 @@ The starting point is the TightVNC 2.8.88 GPL source, downloaded from <https://w
 
 That download is the first commit on `main`, tagged `upstream-2.8.88`. Nothing else is in that commit.
 
+## Versions
+
+Windows gives four version fields. This fork uses them as `major.minor.upstream-build.fork-build`, so `2.8.88.1` is the first fork release built on upstream 2.8.88. Release tags match, as `v2.8.88.1`.
+
+`RELEASING.md` has the steps for cutting one.
+
 ## License
 
 TightVNC is free software under the GNU General Public License, version 2 or
 later. This fork therefore carries the same license.
 
-The full license text is in `wix-installer/LICENSE.txt`.
+The full license text is in `LICENSE.txt`.
 
 Two bundled libraries keep their own licenses. See `zlib/LICENSE` for zlib, and the legal section of `libjpeg/README` for libjpeg.
 
@@ -40,7 +56,7 @@ Windows and Visual Studio only.  Open `tightvnc2017.sln` and build the project y
 
 Build `tvnviewer` on its own rather than the whole solution. Building everything also builds the installer, which needs the WiX v3 SDK.
 
-The projects target the v141 toolset and the Windows 8.1 SDK. Neither ships with current Visual Studio, so it will offer to retarget the solution on load.
+The projects target the v141 toolset, which no longer ships with Visual Studio, so it will offer to retarget the solution on load. Decline, and install the "MSVC v141 build tools" component instead. The Windows SDK version lives in `Directory.Build.props` and defaults to `10.0.26100.0`.
 
 ## Upstream
 
