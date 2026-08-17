@@ -34,5 +34,9 @@ Win32/
 *.wixpdb
 *.msi
 
+# Release artifacts staged for upload
+dist/
+*.zip
+
 # macOS
 .DS_Store

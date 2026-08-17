@@ -50,7 +50,8 @@ above 100 as a beta marker and rewrites the whole string.
 5. Copy one exe on its own into an empty folder and run it. It must start with no
    missing-DLL error. Open Help > About and confirm the version and build date.
 
-6. Build one zip per architecture:
+6. Build one zip per architecture, into `dist/`. That folder is git-ignored, as
+   is any stray `.zip`, so build output never lands in a commit.
 
    ```
    tightvnc-viewer-2.8.88.N-x64.zip
@@ -81,7 +82,7 @@ above 100 as a beta marker and rewrites the whole string.
 9. Write the notes from the template below, then publish:
 
    ```
-   gh release create v2.8.88.N *.zip --title "Viewer 2.8.88.N" --notes-file notes.md
+   gh release create v2.8.88.N dist/*.zip --title "Viewer 2.8.88.N" --notes-file notes.md
    ```
 
 10. Download one zip from the published release. Check its hash, then run the exe.
