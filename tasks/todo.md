@@ -189,6 +189,64 @@ the path box. Everything else moves behind one button at the end of that row.
       disabled.
 - [x] Close and reopen the file transfer dialog. The tooltip still works.
 
+## Phase 5: a dialog of its own for transfer options
+
+The file transfer settings sat in a group at the bottom of the viewer
+configuration dialog, which is reached from the tray icon and is nowhere near
+a transfer in progress. They move to a dialog of their own, opened by a gear
+button in the file transfer window.
+
+- [x] `tvnviewer/FtOptionsDialog.{h,cpp}`, holding the pattern editor moved
+      out of `ConfigurationDialog` unchanged
+- [x] `ViewerConfig` gains `SkipUploadConfirm`, defaulting to off
+- [x] Gate the upload confirmation on it, the way the download one is gated
+- [x] New `ftclient_optionsDialog` at 244x190, grouped by direction: an
+      Upload group holding one checkbox, and a Download group holding the
+      checkbox and the pattern editor
+- [x] Shrink `IDD_CONFIGURATION` back to 221x216 and drop the File Transfer
+      group, restoring `ConfigurationDialog.{h,cpp}` to their pre-phase-3 state
+- [x] Draw `res/gear.ico` at 16, 24, 32 and 48
+- [x] Gear button under the two transfer arrows, `BS_ICON` with the icon set
+      through `BM_SETIMAGE`
+- [x] A "Transfer Options" tooltip on it, sharing the places tooltip window
+- [x] Add the new files to all three project formats
+- [ ] Build and run the phase 5 manual checks
+
+### Phase 5 manual checks
+
+- [ ] Open Configuration from the tray icon. The File Transfer group is gone,
+      the window is short again, and OK and Cancel sit right below Logging.
+- [ ] Open file transfer. A gear button sits below the two transfer arrows and
+      shows a gear, not an empty face or a box.
+- [ ] Hover the gear. A "Transfer Options" tooltip appears.
+- [ ] Press it. The Transfer Options dialog opens over the file transfer
+      window.
+- [ ] Both checkboxes come back holding what the registry says. The pattern
+      list comes back filled.
+- [ ] Add a pattern, press OK, reopen. The pattern is there and
+      `HKCU\Software\TightVNC\Viewer\FtAutoOverwrite` holds it.
+- [ ] Add a pattern, press Cancel, reopen. Nothing was kept.
+- [ ] Tick "before uploading", press OK. Check that
+      `HKCU\Software\TightVNC\Viewer\SkipUploadConfirm` is 1.
+- [ ] Upload a file. The Yes/No box does not appear.
+- [ ] Upload a file that exists remotely. The conflict dialog still appears,
+      even for a name matching a pattern.
+- [ ] Untick it. The upload confirmation comes back.
+- [ ] Tick "before downloading" and confirm downloads behave as they did.
+- [ ] Add a pattern while a transfer is running, press OK, then start a new
+      download. The new pattern applies.
+- [ ] Press the gear during a transfer. It is greyed with the other controls.
+- [ ] Type a pattern and press Enter with no row selected. It is added and the
+      dialog stays open.
+- [ ] Select a row, edit the text, press Enter. The row is replaced.
+- [ ] Press Enter with the pattern box empty. The dialog closes and saves.
+- [ ] Check that the Upload group holds one checkbox, and that the Download
+      group holds the other checkbox and the whole pattern editor.
+- [ ] Tab through the dialog. The order runs upload checkbox, download
+      checkbox, list, the three buttons, pattern box, OK, Cancel.
+- [ ] Check the dialog at 125 and 150 percent scaling. The gear stays sharp
+      and neither group clips.
+
 ## Domain rules
 
 Accreted as they surface. These are decisions, not guesses.
@@ -348,6 +406,34 @@ Accreted as they surface. These are decisions, not guesses.
 - Saving deletes every existing subkey tree first, so a nested key left by an
   earlier build disappears the next time the editor writes.
 
+- The file transfer settings live in a dialog of their own, opened from the
+  file transfer window. The configuration dialog is reached from the tray icon,
+  which is nowhere near a transfer in progress.
+- They live there only. Keeping them in both places would mean two dialogs
+  editing the same registry values, each needing to load and save correctly.
+- The upload setting covers the question asked before the transfer starts, and
+  nothing else. A remote file that would be replaced still opens the conflict
+  dialog, and the overwrite patterns stay downloads only. The file at risk
+  belongs to the other machine either way.
+- The gear button carries an icon and no caption, so a tooltip names it. It
+  joins the tooltip window the places arrows already use.
+- The icon is a real `.ico` at four sizes rather than a text glyph. `BS_ICON`
+  with `BM_SETIMAGE` renders the same everywhere, while a gear character
+  depends on the dialog font carrying it.
+- `LoadImage` at 16 by 16, not `LoadIcon`. `LoadIcon` answers with the large
+  icon and leaves the button to scale it down.
+- The pattern editor moved across unchanged. It was already self-contained, so
+  copying it whole kept one behaviour rather than growing a second.
+- `ConfigurationDialog` returns to exactly its pre-phase-3 state. Every change
+  ever made to it belonged to the group that moved out.
+- The options dialog groups by direction, not by kind of setting. Upload and
+  Download each hold everything that governs them, so the asymmetry between
+  the two sides is visible in the shape of the dialog. Grouping the two
+  checkboxes together under Confirmation hid it.
+- The options dialog saves settings itself rather than leaving it to the
+  viewer, because it is opened from a transfer and the next download reads the
+  setting straight back.
+
 ## Review
 
 Written at the end of each phase.
@@ -482,3 +568,30 @@ have it, but the manual checks look at it.
 
 [ ] Think about moving the overwrite options into the transfer window
 [ ] Upload confirmation should also be gated on the overwrite setting
+
+### Phase 5
+
+Implementation complete, not yet compiled. The Windows build and the manual
+checks are still outstanding.
+
+The pattern editor moved across unchanged. It was already self-contained, so
+`ConfigurationDialog` gave up every line it had gained and returns to exactly
+its pre-phase-3 state, byte for byte. That is worth saying plainly: every
+change ever made to that file belonged to the group that moved out.
+
+The upload setting covers the confirmation and nothing else. Uploads still ask
+before replacing a remote file, and the overwrite patterns are still downloads
+only, so the rule about the file at risk belonging to the other machine
+survives intact. The Upload group holds one checkbox and nothing else, which
+says the same thing by its shape.
+
+The gear is a real icon rather than a text glyph. The places arrow got away
+with U+25BC because the dialog font carries it, but U+2699 is far less likely
+to be present, and a missing glyph draws a box. `res/gear.ico` holds 16, 24, 32
+and 48 pixel versions, and the button takes the 16 through `BM_SETIMAGE`.
+`LoadImage` is asked for that size directly, since `LoadIcon` answers with the
+large icon and would leave the button scaling it down.
+
+One thing to watch in the checks. The icon was drawn on macOS and has never
+been rendered by Windows. The shape reads at 16 pixels in a preview, but only
+the build will show it against a real button face.

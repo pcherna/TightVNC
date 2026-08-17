@@ -28,20 +28,16 @@
 #include "client-config-lib/ViewerConfig.h"
 #include "client-config-lib/ConnectionConfig.h"
 #include "client-config-lib/ConnectionConfigSM.h"
-#include "client-config-lib/FtAutoOverwrite.h"
 #include "client-config-lib/ViewerSettingsManager.h"
 #include "util/StringParser.h"
 #include "gui/BaseDialog.h"
 #include "gui/Control.h"
-#include "gui/ListBox.h"
 #include "gui/TextBox.h"
 #include "gui/CheckBox.h"
 #include "gui/SpinControl.h"
 #include "gui/ComboBox.h"
 #include "gui/TrackBar.h"
 #include "resource.h"
-
-#include <vector>
 
 #include "win-system/WindowsApplication.h"
 
@@ -69,13 +65,6 @@ protected:
   TextBox m_logging;
   Control m_openLogDir;
 
-  CheckBox m_skipDownloadConfirm;
-  ListBox m_patternList;
-  TextBox m_patternBox;
-  Control m_addPattern;
-  Control m_replacePattern;
-  Control m_removePattern;
-
   WindowsApplication *m_application;
 
 private:
@@ -83,55 +72,6 @@ private:
   bool isInputValid();
   bool testNum(TextBox *tb, const TCHAR *tbName);
   void onOkPressed();
-
-  //
-  // Overwrite patterns are edited on a working copy and written only when OK
-  // is pressed, so Cancel leaves the stored list untouched.
-  //
-
-  void fillPatternList(int selectIndex);
-
-  //
-  // Greys whatever the current selection and the pattern box make
-  // meaningless.
-  //
-
-  void updatePatternButtons();
-
-  void onPatternSelectionChanged();
-  void onAddPattern();
-  void onReplacePattern();
-  void onRemovePattern();
-
-  //
-  // Handles Enter pressed inside the pattern box, and returns true when it
-  // did.
-  //
-  // OK is the default button, so Enter would otherwise close the dialog and
-  // throw away whatever was typed. Enter acts on the selection instead: it
-  // replaces the highlighted row, or adds a row when none is highlighted.
-  // Selecting a row copies it into the box, so select, edit, Enter has to
-  // mean replace. Adding there would leave the old row behind next to a
-  // near-duplicate.
-  //
-  // An empty box is left to close the dialog, which is what Enter does
-  // everywhere else in it.
-  //
-
-  bool onPatternBoxEnter();
-
-  //
-  // True when the list already holds this pattern, ignoring the row at
-  // exceptIndex so that replacing a row with itself is allowed.
-  //
-  // Compared without case, because matching ignores case too, so two rows
-  // differing only in case would behave identically.
-  //
-
-  bool patternIsTaken(const TCHAR *pattern, int exceptIndex);
-
-  FtAutoOverwrite m_autoOverwrite;
-  vector<StringStorage> m_workingPatterns;
 };
 
 #endif

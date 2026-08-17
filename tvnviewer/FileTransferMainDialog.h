@@ -173,6 +173,15 @@ protected:
   void initPlacesTooltip();
 
   //
+  // Opens the transfer options, and picks up what changed.
+  //
+  // The settings used to sit in the viewer configuration dialog, which is
+  // reached from the tray icon and is nowhere near a transfer in progress.
+  //
+
+  void onOptionsButtonClick();
+
+  //
   // Labels one place button, shortening the name to what the button can show,
   // and returns true when it had to shorten it.
   //
@@ -410,6 +419,20 @@ protected:
 
   Control m_localPlacesMoreButton;
   Control m_remotePlacesMoreButton;
+
+  //
+  // Opens the transfer options. It sits under the two transfer arrows and
+  // carries a gear rather than a caption, so the tooltip names it.
+  //
+
+  Control m_optionsButton;
+
+  //
+  // The gear. Loaded from the resource at 16 by 16 and handed to the button,
+  // which owns nothing, so it is released with the dialog.
+  //
+
+  HICON m_gearIcon;
 
   //
   // Tooltip window serving the whole places row. Owned by the dialog, so it

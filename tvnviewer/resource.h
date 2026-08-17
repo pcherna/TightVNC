@@ -129,6 +129,16 @@
 #define IDC_FTEP_DOWN_PLACE             1121
 #define IDC_LOCAL_PLACE4_BUTTON         1122
 #define IDC_REMOTE_PLACE4_BUTTON        1123
+#define IDC_FT_OPTIONS_BUTTON           1124
+#define ftclient_optionsDialog          233
+#define IDI_GEAR                        110
+#define IDC_FTO_SKIP_DOWNLOAD           1125
+#define IDC_FTO_SKIP_UPLOAD             1126
+#define IDC_FTO_PATTERN_LIST            1127
+#define IDC_FTO_PATTERN_EDIT            1128
+#define IDC_FTO_ADD_PATTERN             1129
+#define IDC_FTO_REPLACE_PATTERN         1130
+#define IDC_FTO_REMOVE_PATTERN          1131
 #define IDC_SHELP                       1032
 #define IDC_CSHOWTOOLBARS               1033
 #define IDC_CWARNATSW                   1034
@@ -186,12 +196,6 @@
 #define IDC_CWARN_FS                    1088
 #define IDC_ID_EDIT                     1089
 #define IDC_LABEL_ID                    1090
-#define IDC_CFT_SKIP_CONFIRM            1107
-#define IDC_CFT_PATTERN_LIST            1108
-#define IDC_CFT_PATTERN_EDIT            1109
-#define IDC_CFT_ADD_PATTERN             1110
-#define IDC_CFT_REPLACE_PATTERN         1111
-#define IDC_CFT_REMOVE_PATTERN          1112
 #define ID_CONN_OPTIONS                 40001
 #define ID_CONN_INFO                    40002
 #define ID_SHOW_TOOLBAR                 40004
@@ -204,9 +208,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        233
+#define _APS_NEXT_RESOURCE_VALUE        234
 #define _APS_NEXT_COMMAND_VALUE         40010
-#define _APS_NEXT_CONTROL_VALUE         1124
+#define _APS_NEXT_CONTROL_VALUE         1132
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

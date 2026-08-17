@@ -10,9 +10,9 @@ The improvements are to the user-interface and not to the underlying remote acce
 
 * The File Transfer dialog remembers the last-visited local and remote folders, on a per-host basis.
 * In the File Transfer dialog, the local and remote sides support a Places feature where you can define places (e.g. "Log Folder"), backed by one or more folder locations. Selecting a place moves you to the first folder location that exists at the remote. This lets you have easy access to places that are deeply nested, or that have different physical locations on different groups of fielded systems. Each side puts its first four places on buttons above the path box. The rest, plus Edit Places, sit behind the arrow button at the end of that row. Up and Down in the Edit Places dialog set the order, so you choose which four get buttons.
-* Two settings streamline repeated downloads. Both are in the Viewer Configuration dialog, under File Transfer, and both leave uploads alone.
-  * "Do not ask for confirmation before downloading" drops the Yes/No box that appears after you press the download button.
-  * A list of filename patterns that overwrite an existing local file without opening the conflict dialog. Use it for files you re-download on purpose, such as `*.log` or `bill_202*.*`. Take care: a pattern of `*` silently overwrites everything, and there is no undo. Pressing Skip All during a transfer still wins over the patterns.
+* A Transfer Options dialog holds the settings that streamline repeated transfers. The gear button in the File Transfer window opens it, below the two transfer arrows.
+  * "Do not ask for confirmation before downloading" drops the Yes/No box that appears after you press the download button. There is a matching setting for uploads.
+  * A list of filename patterns that overwrite an existing local file without opening the conflict dialog. Use it for files you re-download on purpose, such as `*.log` or `bill_202*.*`. Take care: a pattern of `*` silently overwrites everything, and there is no undo. Pressing Skip All during a transfer still wins over the patterns. The patterns cover downloads only. An upload that would replace a remote file always asks, because the file at risk is on the other machine.
 * As part of this work, retargeted the build at Windows platform v141 (same but drops WinXP).
 
 ## Where the code came from

@@ -29,6 +29,7 @@
 #include "NewFolderDialog.h"
 #include "FileRenameDialog.h"
 #include "FtEditPlacesDialog.h"
+#include "FtOptionsDialog.h"
 
 #include "client-config-lib/ViewerConfig.h"
 
@@ -52,7 +53,8 @@ FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core,
   m_remotePlaces(RegistryPaths::VIEWER_PATH, true),
   m_autoOverwrite(RegistryPaths::VIEWER_PATH),
   m_downloadInProgress(false),
-  m_placesTooltip(0)
+  m_placesTooltip(0),
+  m_gearIcon(0)
 {
   setResourceId(ftclient_mainDialog);
 
@@ -68,6 +70,10 @@ FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core,
 
 FileTransferMainDialog::~FileTransferMainDialog()
 {
+  if (m_gearIcon != 0) {
+    DestroyIcon(m_gearIcon);
+  }
+
   delete m_fakeMoveUpFolder;
   delete m_hostState;
 }
@@ -270,6 +276,9 @@ BOOL FileTransferMainDialog::onCommand(UINT controlID, UINT notificationID)
     break;
   case IDC_REMOTE_PLACE4_BUTTON:
     onPlaceButtonClick(true, 3);
+    break;
+  case IDC_FT_OPTIONS_BUTTON:
+    onOptionsButtonClick();
     break;
   case IDC_LOCAL_PLACES_MORE_BUTTON:
     onPlacesMoreButtonClick(false);
@@ -617,13 +626,15 @@ void FileTransferMainDialog::onUploadButtonClick()
     filesInfo[i] = *fileInfo;
   }
 
-  if (MessageBox(m_ctrlThis.getWindow(),
-                 _T("Do you wish to upload the selected files?"),
-                 _T("Upload Files"),
-                 MB_YESNO | MB_ICONQUESTION) != IDYES) {
-    delete[] indexes;
-    delete[] filesInfo;
-    return ;
+  if (!ViewerConfig::getInstance()->isUploadConfirmationSkipped()) {
+    if (MessageBox(m_ctrlThis.getWindow(),
+                   _T("Do you wish to upload the selected files?"),
+                   _T("Upload Files"),
+                   MB_YESNO | MB_ICONQUESTION) != IDYES) {
+      delete[] indexes;
+      delete[] filesInfo;
+      return ;
+    }
   }
 
   StringStorage localFolder;
@@ -685,7 +696,7 @@ void FileTransferMainDialog::onDownloadButtonClick()
 
   //
   // Reread rather than trust what was loaded when the dialog opened, so that
-  // a pattern added in the configuration dialog applies to this download.
+  // a pattern added in the transfer options applies to this download.
   //
 
   m_downloadInProgress = true;
@@ -869,6 +880,8 @@ void FileTransferMainDialog::enableControls(bool enabled)
   m_localPlacesMoreButton.setEnabled(enabled);
   m_remotePlacesMoreButton.setEnabled(enabled);
 
+  m_optionsButton.setEnabled(enabled);
+
   m_localFileListView.setEnabled(enabled);
   m_remoteFileListView.setEnabled(enabled);
 
@@ -912,6 +925,22 @@ void FileTransferMainDialog::initControls()
 
   m_localPlacesMoreButton.setWindow(GetDlgItem(hwnd, IDC_LOCAL_PLACES_MORE_BUTTON));
   m_remotePlacesMoreButton.setWindow(GetDlgItem(hwnd, IDC_REMOTE_PLACES_MORE_BUTTON));
+
+  m_optionsButton.setWindow(GetDlgItem(hwnd, IDC_FT_OPTIONS_BUTTON));
+
+  //
+  // LoadImage rather than LoadIcon, because LoadIcon answers with the large
+  // icon and the button would then scale it down itself.
+  //
+
+  m_gearIcon = (HICON)LoadImage(GetModuleHandle(0),
+                                MAKEINTRESOURCE(IDI_GEAR), IMAGE_ICON,
+                                16, 16, LR_DEFAULTCOLOR);
+
+  if (m_gearIcon != 0) {
+    SendMessage(m_optionsButton.getWindow(), BM_SETIMAGE, IMAGE_ICON,
+                reinterpret_cast<LPARAM>(m_gearIcon));
+  }
 
   m_cancelButton.setWindow(GetDlgItem(hwnd, IDC_CANCEL_BUTTON));
 
@@ -1153,6 +1182,7 @@ void FileTransferMainDialog::initPlacesTooltip()
   //
 
   static TCHAR placesText[] = _T("Places");
+  static TCHAR optionsText[] = _T("Transfer Options");
 
   //
   // Tooltips come from the bar classes, which nothing in this dialog would
@@ -1196,6 +1226,11 @@ void FileTransferMainDialog::initPlacesTooltip()
               reinterpret_cast<LPARAM>(&info));
 
   info.uId = reinterpret_cast<UINT_PTR>(m_remotePlacesMoreButton.getWindow());
+  SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
+              reinterpret_cast<LPARAM>(&info));
+
+  info.lpszText = optionsText;
+  info.uId = reinterpret_cast<UINT_PTR>(m_optionsButton.getWindow());
   SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
               reinterpret_cast<LPARAM>(&info));
 
@@ -1326,6 +1361,22 @@ bool FileTransferMainDialog::setPlaceButtonText(Control *button,
   button->setText(text.getString());
 
   return truncated;
+}
+
+void FileTransferMainDialog::onOptionsButtonClick()
+{
+  FtOptionsDialog options(&m_ctrlThis);
+
+  if (options.showModal() != IDOK) {
+    return;
+  }
+
+  //
+  // A download already under way reads the patterns when it starts, so it
+  // keeps the list it began with. This picks up the edit for the next one.
+  //
+
+  m_autoOverwrite.load();
 }
 
 void FileTransferMainDialog::updatePlaceButtons(bool remote)
