@@ -172,7 +172,8 @@ protected:
   void initPlacesTooltip();
 
   //
-  // Labels one place button, shortening the name to what the button can show.
+  // Labels one place button, shortening the name to what the button can show,
+  // and returns true when it had to shorten it.
   //
   // A push button centres its caption and clips both ends, so a long name
   // came out as its middle, which reads as nothing. The name is measured
@@ -180,7 +181,17 @@ protected:
   // instead, so it still reads from the start and says that it was cut.
   //
 
-  void setPlaceButtonText(Control *button, const TCHAR *name);
+  bool setPlaceButtonText(Control *button, const TCHAR *name);
+
+  //
+  // Puts text on one place button's tooltip, or takes it away when given an
+  // empty string.
+  //
+  // Only a shortened name gets one. Repeating a name the button already shows
+  // in full would be noise.
+  //
+
+  void setPlaceButtonTip(bool remote, size_t slot, const TCHAR *text);
 
   //
   // Pixels held back from the button width when measuring. A push button
@@ -400,11 +411,22 @@ protected:
   Control m_remotePlacesMoreButton;
 
   //
-  // Tooltip window serving both overflow buttons. Owned by the dialog, so it
+  // Tooltip window serving the whole places row. Owned by the dialog, so it
   // goes when the dialog does.
   //
 
   HWND m_placesTooltip;
+
+  //
+  // Backing store for the place button tooltips.
+  //
+  // The tooltip keeps the pointer it is given rather than copying the string,
+  // so each tool's text has to outlive the call that set it. Whatever
+  // rewrites one of these must hand the new pointer over straight afterwards.
+  //
+
+  StringStorage m_localPlaceTips[PLACE_BUTTON_COUNT];
+  StringStorage m_remotePlaceTips[PLACE_BUTTON_COUNT];
 
   Control m_cancelButton;
 

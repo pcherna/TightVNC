@@ -150,6 +150,13 @@ the path box. Everything else moves behind one button at the end of that row.
       ellipsis.
 - [ ] Give a place a name of a single very wide character. The button shows an
       ellipsis rather than an empty face.
+- [ ] Hover a shortened button. The tooltip shows the whole name.
+- [ ] Hover a button whose name fits. No tooltip appears.
+- [ ] Rename that place to something long, press OK, hover it again. The
+      tooltip appears with the new name.
+- [ ] Rename it back to something short and hover again. The tooltip is gone.
+- [ ] Remove enough places that a button hides, then hover where it was. No
+      tooltip appears from the empty slot.
 - [x] Reorder places in Edit Places and press OK. The remote pane still uses
       its cached folders, since order changes no candidate.
 - [x] Confirm the log combo, progress bar and Cancel button sit at the bottom
@@ -276,6 +283,17 @@ Accreted as they surface. These are decisions, not guesses.
 - Measuring selects the button's own font into the DC first. The dialog font
   is not the system default, so measuring without it would answer for the
   wrong typeface.
+- A shortened button carries the full name on a tooltip. A name the button
+  shows in full carries none, because repeating it would be noise.
+- Every place button joins the tooltip as a tool at startup and is given its
+  text later. A tool holding an empty string shows nothing, so an unused slot
+  and an untruncated name need no adding or removing.
+- The tooltip is built before the buttons are first labelled, since labelling
+  a button also decides whether that button needs a tip.
+- Tooltip text is held in a member per button. The tooltip keeps the pointer
+  it is given rather than copying the string, so the text has to outlive the
+  call, and anything that rewrites it must hand the new pointer over straight
+  afterwards.
 - Reordering places invalidates no cached resolution. The cache is keyed by
   place name and turns on the candidates, and order touches neither.
 - A backslash in a place name becomes a forward slash. The registry API reads
@@ -359,6 +377,12 @@ portion and an ellipsis.
 takes from the right and the start survives. It was rejected for saying
 nothing about the cut, and for pushing every short name against the left edge
 to fix a case that only some names hit.
+
+Shortening a name hides the rest of it, so a shortened button now carries the
+whole name on the tooltip already serving the two arrows. Buttons whose names
+fit carry none. Every button joins as a tool at startup and is given its text
+afterwards, because a tool holding an empty string shows nothing, which saves
+adding and removing tools as places come and go.
 
 The order is the list position rather than a field on `FtPlace`. `save` writes
 the position out and `load` sorts by what it reads, so the editor gets

@@ -889,6 +889,13 @@ void FileTransferMainDialog::initControls()
   m_fileExistDialog.setParent(&m_ctrlThis);
 
   //
+  // The tooltip goes up first, because labelling a button also decides
+  // whether that button needs one.
+  //
+
+  initPlacesTooltip();
+
+  //
   // Read once here so the place buttons can be labelled. Every later read
   // happens when the menu is opened, which is also where the labels are
   // brought up to date.
@@ -899,8 +906,6 @@ void FileTransferMainDialog::initControls()
 
   updatePlaceButtons(false);
   updatePlaceButtons(true);
-
-  initPlacesTooltip();
 }
 
 void FileTransferMainDialog::raise(Exception &ex)
@@ -1153,9 +1158,60 @@ void FileTransferMainDialog::initPlacesTooltip()
   info.uId = reinterpret_cast<UINT_PTR>(m_remotePlacesMoreButton.getWindow());
   SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
               reinterpret_cast<LPARAM>(&info));
+
+  //
+  // The place buttons join as tools now and get their text later, once the
+  // places are read. A tool carrying an empty string shows nothing, which is
+  // what an untruncated name and an unused slot both want.
+  //
+
+  info.lpszText = _T("");
+
+  for (size_t i = 0; i < PLACE_BUTTON_COUNT; i++) {
+    info.uId = reinterpret_cast<UINT_PTR>(m_localPlaceButtons[i].getWindow());
+    SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
+                reinterpret_cast<LPARAM>(&info));
+
+    info.uId = reinterpret_cast<UINT_PTR>(m_remotePlaceButtons[i].getWindow());
+    SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
+                reinterpret_cast<LPARAM>(&info));
+  }
 }
 
-void FileTransferMainDialog::setPlaceButtonText(Control *button,
+void FileTransferMainDialog::setPlaceButtonTip(bool remote, size_t slot,
+                                               const TCHAR *text)
+{
+  if (m_placesTooltip == 0) {
+    return;
+  }
+
+  //
+  // The tooltip keeps the pointer it is given rather than copying the string,
+  // so the text is stored first and the pointer handed over second. Anything
+  // that rewrites one of these must send this message again.
+  //
+
+  StringStorage *held = remote ? &m_remotePlaceTips[slot]
+                               : &m_localPlaceTips[slot];
+  held->setString(text);
+
+  Control *button = remote ? &m_remotePlaceButtons[slot]
+                           : &m_localPlaceButtons[slot];
+
+  TOOLINFO info;
+  memset(&info, 0, sizeof(info));
+
+  info.cbSize = sizeof(info);
+  info.uFlags = TTF_IDISHWND;
+  info.hwnd = m_ctrlThis.getWindow();
+  info.uId = reinterpret_cast<UINT_PTR>(button->getWindow());
+  info.lpszText = const_cast<TCHAR *>(held->getString());
+
+  SendMessage(m_placesTooltip, TTM_UPDATETIPTEXT, 0,
+              reinterpret_cast<LPARAM>(&info));
+}
+
+bool FileTransferMainDialog::setPlaceButtonText(Control *button,
                                                 const TCHAR *name)
 {
   static const TCHAR ELLIPSIS[] = _T("...");
@@ -1174,7 +1230,7 @@ void FileTransferMainDialog::setPlaceButtonText(Control *button,
       ReleaseDC(hwnd, dc);
     }
     button->setText(name);
-    return;
+    return false;
   }
 
   //
@@ -1192,10 +1248,14 @@ void FileTransferMainDialog::setPlaceButtonText(Control *button,
   StringStorage text(name);
   size_t full = text.getLength();
 
+  bool truncated = false;
+
   SIZE size;
 
   if (GetTextExtentPoint32(dc, name, static_cast<int>(full), &size) != 0 &&
       size.cx > room) {
+    truncated = true;
+
     //
     // Shortened one character at a time rather than by estimating from an
     // average width, because a proportional font makes that estimate wrong
@@ -1224,6 +1284,8 @@ void FileTransferMainDialog::setPlaceButtonText(Control *button,
   ReleaseDC(hwnd, dc);
 
   button->setText(text.getString());
+
+  return truncated;
 }
 
 void FileTransferMainDialog::updatePlaceButtons(bool remote)
@@ -1235,7 +1297,17 @@ void FileTransferMainDialog::updatePlaceButtons(bool remote)
 
   for (size_t i = 0; i < PLACE_BUTTON_COUNT; i++) {
     if (i < count) {
-      setPlaceButtonText(&buttons[i], places->getPlace(i)->name.getString());
+      const TCHAR *name = places->getPlace(i)->name.getString();
+
+      //
+      // The tooltip carries the name only when the button could not show all
+      // of it. Repeating a name the user can already read would be noise.
+      //
+
+      bool truncated = setPlaceButtonText(&buttons[i], name);
+
+      setPlaceButtonTip(remote, i, truncated ? name : _T(""));
+
       buttons[i].setVisible(true);
     } else {
       //
@@ -1244,6 +1316,7 @@ void FileTransferMainDialog::updatePlaceButtons(bool remote)
       //
 
       buttons[i].setText(_T(""));
+      setPlaceButtonTip(remote, i, _T(""));
       buttons[i].setVisible(false);
     }
   }
