@@ -74,6 +74,9 @@ BOOL ConfigurationDialog::onCommand(UINT controlID, UINT notificationID)
     }
   }
   if (controlID == IDOK) {
+    if (onPatternBoxEnter()) {
+      return TRUE;
+    }
     onOkPressed();
     if (m_application != 0) {
       m_application->postMessage(TvnViewer::WM_USER_CONFIGURATION_RELOAD);
@@ -361,6 +364,36 @@ void ConfigurationDialog::onReplacePattern()
   m_workingPatterns.at(index).setString(pattern.getString());
 
   fillPatternList(index);
+}
+
+bool ConfigurationDialog::onPatternBoxEnter()
+{
+  if (GetFocus() != m_patternBox.getWindow()) {
+    return false;
+  }
+
+  StringStorage typed;
+  m_patternBox.getText(&typed);
+
+  if (typed.isEmpty()) {
+    return false;
+  }
+
+  int index = m_patternList.getSelectedIndex();
+
+  if (index >= 0 && static_cast<size_t>(index) < m_workingPatterns.size()) {
+    onReplacePattern();
+  } else {
+    onAddPattern();
+  }
+
+  //
+  // Consumed even when the action refused the pattern, a duplicate for
+  // instance. Closing the dialog on the back of a refusal would be the same
+  // loss this exists to prevent.
+  //
+
+  return true;
 }
 
 void ConfigurationDialog::onRemovePattern()

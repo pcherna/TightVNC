@@ -104,6 +104,23 @@ private:
   void onRemovePattern();
 
   //
+  // Handles Enter pressed inside the pattern box, and returns true when it
+  // did.
+  //
+  // OK is the default button, so Enter would otherwise close the dialog and
+  // throw away whatever was typed. Enter acts on the selection instead: it
+  // replaces the highlighted row, or adds a row when none is highlighted.
+  // Selecting a row copies it into the box, so select, edit, Enter has to
+  // mean replace. Adding there would leave the old row behind next to a
+  // near-duplicate.
+  //
+  // An empty box is left to close the dialog, which is what Enter does
+  // everywhere else in it.
+  //
+
+  bool onPatternBoxEnter();
+
+  //
   // True when the list already holds this pattern, ignoring the row at
   // exceptIndex so that replacing a row with itself is allowed.
   //
