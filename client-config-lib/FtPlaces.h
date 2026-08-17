@@ -67,9 +67,9 @@ struct FtPlace
 // collide.
 //
 // Places come back in the order given by their Order value, lowest first.
-// Order is what the dialog puts on its buttons: the first three places get a
+// Order is what the dialog puts on its buttons: the first few places get a
 // button each and the rest go in the menu, so the user has to be able to say
-// which three those are. Registry enumeration is alphabetical, which is not
+// which ones those are. Registry enumeration is alphabetical, which is not
 // something anyone chose.
 //
 // A place with no Order value sorts after every place that has one, keeping

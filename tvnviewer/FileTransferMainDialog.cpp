@@ -228,6 +228,9 @@ BOOL FileTransferMainDialog::onCommand(UINT controlID, UINT notificationID)
   case IDC_LOCAL_PLACE3_BUTTON:
     onPlaceButtonClick(false, 2);
     break;
+  case IDC_LOCAL_PLACE4_BUTTON:
+    onPlaceButtonClick(false, 3);
+    break;
   case IDC_REMOTE_PLACE1_BUTTON:
     onPlaceButtonClick(true, 0);
     break;
@@ -236,6 +239,9 @@ BOOL FileTransferMainDialog::onCommand(UINT controlID, UINT notificationID)
     break;
   case IDC_REMOTE_PLACE3_BUTTON:
     onPlaceButtonClick(true, 2);
+    break;
+  case IDC_REMOTE_PLACE4_BUTTON:
+    onPlaceButtonClick(true, 3);
     break;
   case IDC_LOCAL_PLACES_MORE_BUTTON:
     onPlacesMoreButtonClick(false);
@@ -849,12 +855,14 @@ void FileTransferMainDialog::initControls()
   static const UINT localPlaceIds[PLACE_BUTTON_COUNT] = {
     IDC_LOCAL_PLACE1_BUTTON,
     IDC_LOCAL_PLACE2_BUTTON,
-    IDC_LOCAL_PLACE3_BUTTON
+    IDC_LOCAL_PLACE3_BUTTON,
+    IDC_LOCAL_PLACE4_BUTTON
   };
   static const UINT remotePlaceIds[PLACE_BUTTON_COUNT] = {
     IDC_REMOTE_PLACE1_BUTTON,
     IDC_REMOTE_PLACE2_BUTTON,
-    IDC_REMOTE_PLACE3_BUTTON
+    IDC_REMOTE_PLACE3_BUTTON,
+    IDC_REMOTE_PLACE4_BUTTON
   };
 
   for (size_t i = 0; i < PLACE_BUTTON_COUNT; i++) {

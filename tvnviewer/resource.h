@@ -127,6 +127,8 @@
 #define IDC_FTEP_DOWN_CAND              1106
 #define IDC_FTEP_UP_PLACE               1120
 #define IDC_FTEP_DOWN_PLACE             1121
+#define IDC_LOCAL_PLACE4_BUTTON         1122
+#define IDC_REMOTE_PLACE4_BUTTON        1123
 #define IDC_SHELP                       1032
 #define IDC_CSHOWTOOLBARS               1033
 #define IDC_CWARNATSW                   1034
@@ -198,7 +200,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        233
 #define _APS_NEXT_COMMAND_VALUE         40010
-#define _APS_NEXT_CONTROL_VALUE         1122
+#define _APS_NEXT_CONTROL_VALUE         1124
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

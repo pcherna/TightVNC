@@ -367,12 +367,12 @@ protected:
   // Places sit on a row of their own above each path box. The first few get
   // a button each and the rest go behind the button at the end of the row.
   //
-  // Three is what the pane is wide enough for at a readable button width. The
-  // count is named rather than spelled out because the resource, the labelling
-  // and the menu all have to agree on it.
+  // Four is what the pane fits at 50 dialog units a button, about twelve
+  // characters of name. The count is named rather than spelled out because the
+  // resource, the labelling and the menu all have to agree on it.
   //
 
-  static const size_t PLACE_BUTTON_COUNT = 3;
+  static const size_t PLACE_BUTTON_COUNT = 4;
 
   Control m_localPlaceButtons[PLACE_BUTTON_COUNT];
   Control m_remotePlaceButtons[PLACE_BUTTON_COUNT];

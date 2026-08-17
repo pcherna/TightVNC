@@ -65,7 +65,7 @@ Plan in `~/.claude/plans/i-want-to-streamline-temporal-duckling.md`.
 - [x] Prove the matcher against a table of cases
 - [x] Make Enter act on the selection in all three text boxes, across the
       Configuration and Edit Places dialogs
-- [ ] Build and run the phase 3 manual checks
+- [x] Build and run the phase 3 manual checks
 
 
 Written out here rather than left in the plan file, because the build happens
@@ -109,27 +109,29 @@ the path box. Everything else moves behind one button at the end of that row.
 - [x] `save` writes the order from the list position
 - [x] Up and Down for the places list in Edit Places, growing that dialog to
       320 x 210
-- [x] Three place buttons and an overflow button per pane in `tvnviewer.rc`,
+- [x] Four place buttons and an overflow button per pane in `tvnviewer.rc`,
       on a new row above the path box
 - [x] Grow the file transfer dialog to 503 x 359 and shift everything below
       the new row down by 19
 - [x] Label the buttons when the dialog opens, and hide the empty slots
-- [x] Menu holds only the places past the third, plus Rescan and Edit Places
+- [x] Menu holds only the places past the fourth, plus Rescan and Edit Places
 - [ ] Build and run the phase 4 manual checks
 
 ### Phase 4 manual checks
 
-- [ ] Open file transfer with no places defined. Each pane shows the arrow
+- [x] Open file transfer with no places defined. Each pane shows the arrow
       button alone. Its menu says "(no places defined)" and offers Edit Places.
-- [ ] Define one place. It appears on the first button. The other two stay
+- [x] Define one place. It appears on the first button. The other three stay
       hidden. The menu holds no place entries and no leading separator.
-- [ ] Define five places. Three sit on buttons and two are in the menu.
-- [ ] Click each of the three buttons. Each navigates to its own place.
+- [ ] Define six places. Four sit on buttons and two are in the menu.
+- [ ] Click each of the four buttons. Each navigates to its own place.
 - [ ] Pick a place from the menu. It navigates to the right one, not to an
-      entry three rows off.
-- [ ] Select the fourth place in Edit Places, press Up twice, press OK. It
-      moves onto the second button straight away.
-- [ ] Check that `HKCU\Software\TightVNC\Viewer\FtPlaces\Local\<name>` holds an
+      entry four rows off.
+- [ ] Select the fifth place in Edit Places, press Up twice, press OK. It
+      moves onto the third button straight away.
+- [ ] Check that a name of about twelve characters fits a button without
+      clipping, now that the buttons are 50 units rather than 67.
+- [x] Check that `HKCU\Software\TightVNC\Viewer\FtPlaces\Local\<name>` holds an
       `Order` value alongside the numbered candidate values.
 - [ ] Add a place under that key by hand, with a candidate but no `Order`.
       Reopen the menu. The place appears last.
@@ -251,7 +253,7 @@ Accreted as they surface. These are decisions, not guesses.
   restart.
 - An empty button slot is hidden, not greyed. A greyed button with no caption
   says a place is there but unavailable, which is not what an empty slot means.
-- The menu holds only the places past the third. Repeating the ones already on
+- The menu holds only the places past the fourth. Repeating the ones already on
   buttons would make the row look like it had failed to take them.
 - The menu has no separator when every place is on a button, because nothing
   sits above it to separate.
@@ -325,9 +327,14 @@ quietly it happens.
 
 Putting places on buttons forced a question the feature had dodged. There was
 no order. `load` returned whatever the registry enumeration gave back, which is
-alphabetical by name. Three buttons make the first three places matter, so
-promoting a place would have meant renaming it. An `Order` value per place and
-Up and Down in the editor fix that, and the menu shows the same order.
+alphabetical by name. Buttons make the first few places matter, so promoting a
+place would have meant renaming it. An `Order` value per place and Up and Down
+in the editor fix that, and the menu shows the same order.
+
+The row carries four buttons. It started at three of 67 dialog units, which
+left the pane wider than it needed to be. Four of 50 with two units between
+them fill the same 206 units, and 50 units is about twelve characters. Only
+`PLACE_BUTTON_COUNT`, the resource, and the command switch know the number.
 
 The order is the list position rather than a field on `FtPlace`. `save` writes
 the position out and `load` sorts by what it reads, so the editor gets
@@ -351,6 +358,7 @@ have it, but the manual checks look at it.
 
 [x] Local-side places buttons missing?
 [x] Places arrow-dropdown needs a tooltip
+
 [ ] In the "File already exists" dialog, X doesn't seem to do anything
 
 [ ] Think about moving the overwrite options into the transfer window
