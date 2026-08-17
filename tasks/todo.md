@@ -162,6 +162,10 @@ the path box. Everything else moves behind one button at the end of that row.
 - [ ] Add two places with no paths, press OK, press OK on the warning. Both
       are dropped and the rest still save.
 - [ ] Press Enter on the warning box. It cancels rather than saves.
+- [ ] Hover the arrow button on each pane. A "Places" tooltip appears on both.
+- [ ] Start a transfer and hover it again. No tooltip, because the button is
+      disabled.
+- [ ] Close and reopen the file transfer dialog. The tooltip still works.
 
 ## Domain rules
 
@@ -210,6 +214,13 @@ Accreted as they surface. These are decisions, not guesses.
   selected and the path box focused, which is where the work is.
 - Cancel is the default button on it. A stray Enter would otherwise discard
   the very names being warned about.
+- The overflow arrow carries a "Places" tooltip. It shows no words of its own,
+  so what sits behind it has to be said somewhere. The named buttons beside it
+  get none, since each already reads as its own place.
+- The tooltip window is owned by the dialog, so it dies with it. Reopening the
+  file transfer dialog builds a fresh one.
+- `TTF_SUBCLASS` lets the tooltip take the mouse messages itself. A dialog has
+  no message loop of its own to relay them from.
 - `StringStorage::operator =` returns void, so it is not assignable in the
   sense the standard containers ask for. Anything that would shift elements by
   assignment, `vector::erase` and whole-vector assignment both, is written as
@@ -337,3 +348,11 @@ right edge of the pane rather than the left.
 The arrow glyph on the overflow button is the one thing that cannot be checked
 from here. It is U+25BC in a UTF-16 resource file, and Ms Shell Dlg 2 should
 have it, but the manual checks look at it.
+
+[x] Local-side places buttons missing?
+[x] Places arrow-dropdown needs a tooltip
+[ ] In the "File already exists" dialog, X doesn't seem to do anything
+
+[ ] Think about moving the overwrite options into the transfer window
+[ ] Upload confirmation should also be gated on the overwrite setting
+[ ] existing overwrite settings but add/replace/remove beside the list, whereas the Places puts them under, and uses Rename not Replace

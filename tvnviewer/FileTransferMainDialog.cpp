@@ -47,7 +47,8 @@ FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core,
   m_chainGeneration(0),
   m_chainFiredGeneration(0),
   m_localPlaces(RegistryPaths::VIEWER_PATH, false),
-  m_remotePlaces(RegistryPaths::VIEWER_PATH, true)
+  m_remotePlaces(RegistryPaths::VIEWER_PATH, true),
+  m_placesTooltip(0)
 {
   setResourceId(ftclient_mainDialog);
 
@@ -890,6 +891,8 @@ void FileTransferMainDialog::initControls()
 
   updatePlaceButtons(false);
   updatePlaceButtons(true);
+
+  initPlacesTooltip();
 }
 
 void FileTransferMainDialog::raise(Exception &ex)
@@ -1087,6 +1090,61 @@ void FileTransferMainDialog::onRemoteChainReply(bool listed)
   insertMessageIntoComboBox(message.getString());
 
   endRemoteChain();
+}
+
+void FileTransferMainDialog::initPlacesTooltip()
+{
+  //
+  // Held in a static because the tooltip keeps the pointer it is given rather
+  // than copying the string.
+  //
+
+  static TCHAR placesText[] = _T("Places");
+
+  //
+  // Tooltips come from the bar classes, which nothing in this dialog would
+  // otherwise pull in. The call costs nothing when they are already up.
+  //
+
+  INITCOMMONCONTROLSEX icc;
+  icc.dwSize = sizeof(icc);
+  icc.dwICC = ICC_BAR_CLASSES;
+  InitCommonControlsEx(&icc);
+
+  HWND hwnd = m_ctrlThis.getWindow();
+
+  m_placesTooltip = CreateWindowEx(0, TOOLTIPS_CLASS, 0,
+                                   WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
+                                   CW_USEDEFAULT, CW_USEDEFAULT,
+                                   CW_USEDEFAULT, CW_USEDEFAULT,
+                                   hwnd, 0, GetModuleHandle(0), 0);
+
+  if (m_placesTooltip == 0) {
+    return;
+  }
+
+  TOOLINFO info;
+  memset(&info, 0, sizeof(info));
+
+  info.cbSize = sizeof(info);
+
+  //
+  // TTF_SUBCLASS lets the tooltip pick the mouse messages up itself. Without
+  // it the dialog would have to relay every one, and a dialog has no message
+  // loop of its own to do that in.
+  //
+
+  info.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+  info.hwnd = hwnd;
+  info.lpszText = placesText;
+
+  info.uId = reinterpret_cast<UINT_PTR>(m_localPlacesMoreButton.getWindow());
+  SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
+              reinterpret_cast<LPARAM>(&info));
+
+  info.uId = reinterpret_cast<UINT_PTR>(m_remotePlacesMoreButton.getWindow());
+  SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
+              reinterpret_cast<LPARAM>(&info));
 }
 
 void FileTransferMainDialog::updatePlaceButtons(bool remote)

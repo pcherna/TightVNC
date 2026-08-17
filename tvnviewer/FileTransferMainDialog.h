@@ -161,6 +161,16 @@ protected:
 
   void updatePlaceButtons(bool remote);
 
+  //
+  // Puts a "Places" tooltip on both overflow buttons.
+  //
+  // The arrow carries no words, so what sits behind it has to be said
+  // somewhere. The named buttons beside it need no tooltip, since each one
+  // already reads as its own place.
+  //
+
+  void initPlacesTooltip();
+
   void moveUpLocalFolder();
   void moveUpRemoteFolder() throw(IOException);
 
@@ -369,6 +379,13 @@ protected:
 
   Control m_localPlacesMoreButton;
   Control m_remotePlacesMoreButton;
+
+  //
+  // Tooltip window serving both overflow buttons. Owned by the dialog, so it
+  // goes when the dialog does.
+  //
+
+  HWND m_placesTooltip;
 
   Control m_cancelButton;
 
