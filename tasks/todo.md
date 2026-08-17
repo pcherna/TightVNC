@@ -154,6 +154,14 @@ the path box. Everything else moves behind one button at the end of that row.
       that save.
 - [ ] Rename a place to one holding a backslash, where the forward slash form
       already exists. The duplicate warning appears.
+- [ ] Add a place name, add no path, press OK. The warning names that place.
+      Press Cancel. The dialog stays open with the place selected and the
+      cursor in the path box.
+- [ ] Type a path there and press Enter. It is added. Press OK. The dialog
+      closes with no warning and the place gets a button.
+- [ ] Add two places with no paths, press OK, press OK on the warning. Both
+      are dropped and the rest still save.
+- [ ] Press Enter on the warning box. It cancels rather than saves.
 
 ## Domain rules
 
@@ -195,6 +203,13 @@ Accreted as they surface. These are decisions, not guesses.
 - Saving rewrites a side's definitions wholesale rather than merging, so a
   removed place disappears and no stale candidate numbering survives.
 - A place with no candidates is not written. It could never resolve.
+- The editor warns before dropping one, and names it. The name sits in the
+  list looking saved, so losing it without a word is a trap. The rule is about
+  what reaches the registry, not about how quietly it happens.
+- Cancel on that warning returns to the dialog with the first offender
+  selected and the path box focused, which is where the work is.
+- Cancel is the default button on it. A stray Enter would otherwise discard
+  the very names being warned about.
 - `StringStorage::operator =` returns void, so it is not assignable in the
   sense the standard containers ask for. Anything that would shift elements by
   assignment, `vector::erase` and whole-vector assignment both, is written as
@@ -290,6 +305,12 @@ Normalising at input rather than only at save is what keeps the per-host
 resolved-answer cache working. That cache is keyed by place name, and holds it
 as a value name rather than a key name, so a backslash was legal there and the
 two spellings would have missed each other.
+
+The same check turned up a second silent loss standing beside the first. A
+place with no candidate paths is dropped on save, by a rule that is right in
+itself, but it went without a word. The editor now names those places on OK
+and offers to go back. The rule governs what reaches the registry, not how
+quietly it happens.
 
 Putting places on buttons forced a question the feature had dodged. There was
 no order. `load` returned whatever the registry enumeration gave back, which is

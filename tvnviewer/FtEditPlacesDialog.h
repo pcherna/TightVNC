@@ -136,6 +136,18 @@ private:
 
   bool onTextBoxEnter();
 
+  //
+  // Warns about places holding no candidate paths, and returns true when the
+  // save should go ahead.
+  //
+  // Such a place is not written, because it could never resolve. Dropping it
+  // without a word is the trap this closes: the name sits in the list looking
+  // saved, and comes back gone. Cancel returns to the dialog with the first
+  // offender selected, so the path box is already pointed at the work.
+  //
+
+  bool confirmEmptyPlaces();
+
   void onOkButtonClick();
 
   //

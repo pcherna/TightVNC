@@ -648,8 +648,70 @@ bool FtEditPlacesDialog::onTextBoxEnter()
   return false;
 }
 
+bool FtEditPlacesDialog::confirmEmptyPlaces()
+{
+  int firstEmpty = -1;
+  int count = 0;
+
+  StringStorage names;
+
+  for (size_t i = 0; i < m_working.size(); i++) {
+    if (!m_working.at(i).candidates.empty()) {
+      continue;
+    }
+
+    if (firstEmpty < 0) {
+      firstEmpty = static_cast<int>(i);
+    }
+    count++;
+
+    names.appendString(_T("\r\n    "));
+    names.appendString(m_working.at(i).name.getString());
+  }
+
+  if (count == 0) {
+    return true;
+  }
+
+  StringStorage message;
+
+  if (count == 1) {
+    message.format(_T("This place has no candidate paths, so it will not be ")
+                   _T("saved:\r\n%s\r\n\r\nPress Cancel to go back and add a ")
+                   _T("path, or OK to save without it."),
+                   names.getString());
+  } else {
+    message.format(_T("These places have no candidate paths, so they will not ")
+                   _T("be saved:\r\n%s\r\n\r\nPress Cancel to go back and add ")
+                   _T("paths, or OK to save without them."),
+                   names.getString());
+  }
+
+  //
+  // Cancel is the default. A stray Enter on this box would otherwise throw
+  // away the very names it is warning about.
+  //
+
+  int answer = MessageBox(m_ctrlThis.getWindow(), message.getString(),
+                          _T("Edit Places"),
+                          MB_OKCANCEL | MB_ICONWARNING | MB_DEFBUTTON2);
+
+  if (answer == IDOK) {
+    return true;
+  }
+
+  fillPlacesList(firstEmpty);
+  m_candidatePathBox.setFocus();
+
+  return false;
+}
+
 void FtEditPlacesDialog::onOkButtonClick()
 {
+  if (!confirmEmptyPlaces()) {
+    return;
+  }
+
   forgetChangedPlaces();
 
   m_places.save(&m_working);
