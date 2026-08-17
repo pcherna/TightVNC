@@ -158,6 +158,13 @@ private:
   void getCandidateInput(StringStorage *out);
 
   //
+  // Reads the name box, normalised to what can be a registry key. A
+  // backslash comes back as a forward slash.
+  //
+
+  void getPlaceNameInput(StringStorage *out);
+
+  //
   // Drops the cached resolution of every place whose candidates no longer
   // match what was loaded, and of every place that was removed or renamed.
   //

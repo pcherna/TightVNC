@@ -50,6 +50,23 @@ void FtPlaces::normalizePath(const StringStorage *in, bool remote,
   }
 }
 
+void FtPlaces::normalizeName(const StringStorage *in, StringStorage *out)
+{
+  const TCHAR *chars = in->getString();
+  size_t length = in->getLength();
+
+  out->setString(_T(""));
+
+  for (size_t i = 0; i < length; i++) {
+    TCHAR c = chars[i];
+
+    if (c == _T('\\')) {
+      c = _T('/');
+    }
+    out->appendChar(c);
+  }
+}
+
 FtPlaces::FtPlaces(const TCHAR *registryPath, bool remote)
 : m_remote(remote)
 {
@@ -176,7 +193,16 @@ void FtPlaces::save(const vector<FtPlace> *places)
       continue;
     }
 
-    RegistryKey placeKey(&m_key, place->name.getString(), true);
+    //
+    // Normalised again here rather than trusted from the caller, because a
+    // backslash reaching RegCreateKeyEx makes a nested key rather than a
+    // place, and nothing downstream would report it.
+    //
+
+    StringStorage keyName;
+    normalizeName(&place->name, &keyName);
+
+    RegistryKey placeKey(&m_key, keyName.getString(), true);
     if (!placeKey.isOpened()) {
       continue;
     }

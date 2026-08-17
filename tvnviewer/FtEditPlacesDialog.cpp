@@ -377,10 +377,18 @@ void FtEditPlacesDialog::getCandidateInput(StringStorage *out)
   FtPlaces::normalizePath(&typed, m_remote, out);
 }
 
+void FtEditPlacesDialog::getPlaceNameInput(StringStorage *out)
+{
+  StringStorage typed;
+  m_placeNameBox.getText(&typed);
+
+  FtPlaces::normalizeName(&typed, out);
+}
+
 void FtEditPlacesDialog::onAddPlace()
 {
   StringStorage name;
-  m_placeNameBox.getText(&name);
+  getPlaceNameInput(&name);
 
   //
   // The button is disabled while the box is empty, so this only guards
@@ -412,7 +420,7 @@ void FtEditPlacesDialog::onRenamePlace()
   }
 
   StringStorage name;
-  m_placeNameBox.getText(&name);
+  getPlaceNameInput(&name);
 
   //
   // The button is disabled while the box is empty, so this only guards

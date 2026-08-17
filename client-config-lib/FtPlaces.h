@@ -146,6 +146,24 @@ public:
   static void normalizePath(const StringStorage *in, bool remote,
                             StringStorage *out);
 
+  //
+  // Rewrites a place name into what can be a registry key.
+  //
+  // A backslash becomes a forward slash. The registry API reads a backslash
+  // in a key name as a path separator and has no way to escape it, so a place
+  // called "Support\BCF" would silently become a key "Support" holding a key
+  // "BCF", and neither would carry any candidates. Forward slash is legal in
+  // a key name and reads the same way to a person.
+  //
+  // Applied where the name is typed rather than only where it is saved, so
+  // that one spelling reaches the list, the duplicate check, and the
+  // per-host resolved-answer cache, which is keyed by name.
+  //
+  // in and out must be different objects.
+  //
+
+  static void normalizeName(const StringStorage *in, StringStorage *out);
+
 private:
   RegistryKey m_key;
   vector<FtPlace> m_places;

@@ -54,6 +54,51 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 - [x] Add the new files to both project formats
 - [x] Build and run the phase 2b manual checks
 
+
+Plan in `~/.claude/plans/i-want-to-streamline-temporal-duckling.md`.
+
+- [x] `FileExistDialog::isSkipAll`, so a caller can stand down
+- [x] Guard the download confirmation, track the running direction, and answer
+      Overwrite on a pattern match in `onFtTargetFileExists`
+- [x] Grow `IDD_CONFIGURATION` to 221x320 and add the File Transfer group
+- [x] Add the new files to all three project formats
+- [x] Prove the matcher against a table of cases
+- [x] Make Enter act on the selection in all three text boxes, across the
+      Configuration and Edit Places dialogs
+- [ ] Build and run the phase 3 manual checks
+
+
+Written out here rather than left in the plan file, because the build happens
+on a different machine from the one that wrote them.
+
+run against 31 cases, so these checks cover the wiring around it, not the
+matching itself.
+
+- [x] Open Configuration. The File Transfer group renders without clipping and
+      the OK and Cancel buttons sit below it.
+- [x] Add `*.log` and `bill_202*.*`. Press OK. Check that
+- [x] Reopen Configuration. Both patterns come back.
+- [x] Add a pattern, then press Cancel. The registry is unchanged.
+- [x] Connect, open file transfer, download a file with the checkbox off. The
+      confirmation still appears. Turn the checkbox on. It does not.
+- [x] Download `x.log` twice into a folder that already holds it. The second
+      download overwrites silently. The file's timestamp changes.
+- [x] Download `notes.txt` twice. The conflict dialog still appears.
+- [x] Start a multi-file download holding `a.log` and two non-matching files.
+      Press Skip All on the first conflict. `a.log` is skipped, not
+      overwritten.
+- [x] Upload a file that exists remotely. Both the confirmation and the
+      conflict dialog still appear.
+- [x] Remove every pattern and press OK. The registry key is empty and the
+      conflict dialog returns.
+- [x] Type a pattern and press Enter with no row selected. It is added and the
+      dialog stays open.
+- [x] Select a row, edit the text, press Enter. The row is replaced, not
+      duplicated.
+- [x] Press Enter with the pattern box empty. The dialog closes and saves.
+- [x] Repeat the three Enter checks in Edit Places, for both the place name box
+      (add, then rename) and the candidate path box (add, then replace).
+
 ## Phase 4: places on the toolbar
 
 The first few places of each pane get a button of their own, on a row above
@@ -101,6 +146,14 @@ the path box. Everything else moves behind one button at the end of that row.
       its cached folders, since order changes no candidate.
 - [ ] Confirm the log combo, progress bar and Cancel button sit at the bottom
       of the taller window without clipping.
+- [ ] Name a place `Support\BCF` and give it a candidate. The list shows
+      `Support/BCF` as soon as you press Add. After OK it gets a button, and
+      `FtPlaces\Local` holds one key named `Support/BCF` with no `Support` key
+      beside it.
+- [ ] Confirm the stray `Support` key left by the earlier build is gone after
+      that save.
+- [ ] Rename a place to one holding a backslash, where the forward slash form
+      already exists. The duplicate warning appears.
 
 ## Domain rules
 
@@ -183,6 +236,22 @@ Accreted as they surface. These are decisions, not guesses.
   user can see and fix.
 - Reordering places invalidates no cached resolution. The cache is keyed by
   place name and turns on the candidates, and order touches neither.
+- A backslash in a place name becomes a forward slash. The registry API reads
+  a backslash in a key name as a path separator and offers no escape, so
+  "Support\BCF" became a key "Support" holding a key "BCF", neither carrying
+  candidates. Both then vanished, because a place with no candidates is
+  skipped on load.
+- Forward slash is legal in a registry key name, unlike in a file name, so it
+  is a real substitute rather than a mangling. It also reads the same way to a
+  person.
+- Names are normalised where they are typed, not only where they are saved.
+  The list, the duplicate check and the per-host resolved-answer cache all key
+  on the name, and a name spelled two ways would miss the cache.
+- `save` normalises again rather than trusting its caller, because a backslash
+  reaching `RegCreateKeyEx` produces a nested key and nothing downstream
+  reports it.
+- Saving deletes every existing subkey tree first, so a nested key left by an
+  earlier build disappears the next time the editor writes.
 
 ## Review
 
@@ -208,8 +277,19 @@ before it deletes. The delete cannot overlap the notify.
 
 ### Phase 4
 
-Implementation complete, not yet compiled. The Windows build and the manual
-checks are still outstanding.
+Built. The manual checks are still running.
+
+The first check found a bug older than this phase. A place named `Support\BCF`
+never appeared. The registry API reads a backslash in a key name as a path
+separator, so `save` made a key `Support` holding a key `BCF`, and `load`
+skipped both for having no candidates. Nothing reported it. Place names are now
+rewritten to forward slash, which the registry does allow in a key name, at the
+point they are typed and again in `save`.
+
+Normalising at input rather than only at save is what keeps the per-host
+resolved-answer cache working. That cache is keyed by place name, and holds it
+as a value name rather than a key name, so a backslash was legal there and the
+two spellings would have missed each other.
 
 Putting places on buttons forced a question the feature had dodged. There was
 no order. `load` returned whatever the registry enumeration gave back, which is
