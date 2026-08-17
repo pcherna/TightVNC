@@ -210,41 +210,41 @@ button in the file transfer window.
       through `BM_SETIMAGE`
 - [x] A "Transfer Options" tooltip on it, sharing the places tooltip window
 - [x] Add the new files to all three project formats
-- [ ] Build and run the phase 5 manual checks
+- [x] Build and run the phase 5 manual checks
 
 ### Phase 5 manual checks
 
-- [ ] Open Configuration from the tray icon. The File Transfer group is gone,
+- [x] Open Configuration from the tray icon. The File Transfer group is gone,
       the window is short again, and OK and Cancel sit right below Logging.
-- [ ] Open file transfer. A gear button sits below the two transfer arrows and
+- [x] Open file transfer. A gear button sits below the two transfer arrows and
       shows a gear, not an empty face or a box.
-- [ ] Hover the gear. A "Transfer Options" tooltip appears.
-- [ ] Press it. The Transfer Options dialog opens over the file transfer
+- [x] Hover the gear. A "Transfer Options" tooltip appears.
+- [x] Press it. The Transfer Options dialog opens over the file transfer
       window.
-- [ ] Both checkboxes come back holding what the registry says. The pattern
+- [x] Both checkboxes come back holding what the registry says. The pattern
       list comes back filled.
-- [ ] Add a pattern, press OK, reopen. The pattern is there and
+- [x] Add a pattern, press OK, reopen. The pattern is there and
       `HKCU\Software\TightVNC\Viewer\FtAutoOverwrite` holds it.
-- [ ] Add a pattern, press Cancel, reopen. Nothing was kept.
-- [ ] Tick "before uploading", press OK. Check that
+- [x] Add a pattern, press Cancel, reopen. Nothing was kept.
+- [x] Tick "before uploading", press OK. Check that
       `HKCU\Software\TightVNC\Viewer\SkipUploadConfirm` is 1.
-- [ ] Upload a file. The Yes/No box does not appear.
-- [ ] Upload a file that exists remotely. The conflict dialog still appears,
+- [x] Upload a file. The Yes/No box does not appear.
+- [x] Upload a file that exists remotely. The conflict dialog still appears,
       even for a name matching a pattern.
-- [ ] Untick it. The upload confirmation comes back.
-- [ ] Tick "before downloading" and confirm downloads behave as they did.
-- [ ] Add a pattern while a transfer is running, press OK, then start a new
+- [x] Untick it. The upload confirmation comes back.
+- [x] Tick "before downloading" and confirm downloads behave as they did.
+- [x] Add a pattern while a transfer is running, press OK, then start a new
       download. The new pattern applies.
-- [ ] Press the gear during a transfer. It is greyed with the other controls.
-- [ ] Type a pattern and press Enter with no row selected. It is added and the
+- [x] Press the gear during a transfer. It is greyed with the other controls.
+- [x] Type a pattern and press Enter with no row selected. It is added and the
       dialog stays open.
-- [ ] Select a row, edit the text, press Enter. The row is replaced.
-- [ ] Press Enter with the pattern box empty. The dialog closes and saves.
-- [ ] Check that the Upload group holds one checkbox, and that the Download
+- [x] Select a row, edit the text, press Enter. The row is replaced.
+- [x] Press Enter with the pattern box empty. The dialog closes and saves.
+- [x] Check that the Upload group holds one checkbox, and that the Download
       group holds the other checkbox and the whole pattern editor.
-- [ ] Tab through the dialog. The order runs upload checkbox, download
+- [x] Tab through the dialog. The order runs upload checkbox, download
       checkbox, list, the three buttons, pattern box, OK, Cancel.
-- [ ] Check the dialog at 125 and 150 percent scaling. The gear stays sharp
+- [x] Check the dialog at 125 and 150 percent scaling. The gear stays sharp
       and neither group clips.
 
 ## Domain rules
@@ -566,13 +566,12 @@ have it, but the manual checks look at it.
 
 [ ] In the "File already exists" dialog, X doesn't seem to do anything
 
-[ ] Think about moving the overwrite options into the transfer window
-[ ] Upload confirmation should also be gated on the overwrite setting
+[x] Think about moving the overwrite options into the transfer window
+[x] Upload confirmation should also be gated on the overwrite setting
 
 ### Phase 5
 
-Implementation complete, not yet compiled. The Windows build and the manual
-checks are still outstanding.
+Built and tested on Windows. All the phase 5 checks pass.
 
 The pattern editor moved across unchanged. It was already self-contained, so
 `ConfigurationDialog` gave up every line it had gained and returns to exactly
@@ -592,6 +591,5 @@ and 48 pixel versions, and the button takes the 16 through `BM_SETIMAGE`.
 `LoadImage` is asked for that size directly, since `LoadIcon` answers with the
 large icon and would leave the button scaling it down.
 
-One thing to watch in the checks. The icon was drawn on macOS and has never
-been rendered by Windows. The shape reads at 16 pixels in a preview, but only
-the build will show it against a real button face.
+The gear was drawn on macOS and had never been rendered by Windows until the
+build. It reads correctly on a real button face at the default scaling.
