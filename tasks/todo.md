@@ -54,51 +54,6 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 - [x] Add the new files to both project formats
 - [x] Build and run the phase 2b manual checks
 
-
-Plan in `~/.claude/plans/i-want-to-streamline-temporal-duckling.md`.
-
-- [x] `FileExistDialog::isSkipAll`, so a caller can stand down
-- [x] Guard the download confirmation, track the running direction, and answer
-      Overwrite on a pattern match in `onFtTargetFileExists`
-- [x] Grow `IDD_CONFIGURATION` to 221x320 and add the File Transfer group
-- [x] Add the new files to all three project formats
-- [x] Prove the matcher against a table of cases
-- [x] Make Enter act on the selection in all three text boxes, across the
-      Configuration and Edit Places dialogs
-- [x] Build and run the phase 3 manual checks
-
-
-Written out here rather than left in the plan file, because the build happens
-on a different machine from the one that wrote them.
-
-run against 31 cases, so these checks cover the wiring around it, not the
-matching itself.
-
-- [x] Open Configuration. The File Transfer group renders without clipping and
-      the OK and Cancel buttons sit below it.
-- [x] Add `*.log` and `bill_202*.*`. Press OK. Check that
-- [x] Reopen Configuration. Both patterns come back.
-- [x] Add a pattern, then press Cancel. The registry is unchanged.
-- [x] Connect, open file transfer, download a file with the checkbox off. The
-      confirmation still appears. Turn the checkbox on. It does not.
-- [x] Download `x.log` twice into a folder that already holds it. The second
-      download overwrites silently. The file's timestamp changes.
-- [x] Download `notes.txt` twice. The conflict dialog still appears.
-- [x] Start a multi-file download holding `a.log` and two non-matching files.
-      Press Skip All on the first conflict. `a.log` is skipped, not
-      overwritten.
-- [x] Upload a file that exists remotely. Both the confirmation and the
-      conflict dialog still appear.
-- [x] Remove every pattern and press OK. The registry key is empty and the
-      conflict dialog returns.
-- [x] Type a pattern and press Enter with no row selected. It is added and the
-      dialog stays open.
-- [x] Select a row, edit the text, press Enter. The row is replaced, not
-      duplicated.
-- [x] Press Enter with the pattern box empty. The dialog closes and saves.
-- [x] Repeat the three Enter checks in Edit Places, for both the place name box
-      (add, then rename) and the candidate path box (add, then replace).
-
 ## Phase 4: places on the toolbar
 
 The first few places of each pane get a button of their own, on a row above
@@ -115,7 +70,7 @@ the path box. Everything else moves behind one button at the end of that row.
       the new row down by 19
 - [x] Label the buttons when the dialog opens, and hide the empty slots
 - [x] Menu holds only the places past the fourth, plus Rescan and Edit Places
-- [ ] Build and run the phase 4 manual checks
+- [x] Build and run the phase 4 manual checks
 
 ### Phase 4 manual checks
 
@@ -142,20 +97,20 @@ the path box. Everything else moves behind one button at the end of that row.
 - [x] Start a transfer. Every place button greys with the rest of the controls
       and comes back when the transfer ends.
 - [x] Rescan still appears in the remote menu and not in the local one.
-- [ ] Give a place a very long name. The button shows the start of it followed
+- [x] Give a place a very long name. The button shows the start of it followed
       by an ellipsis, and nothing else on the row moves.
-- [ ] Give a place a name that only just overflows. One or two characters go
+- [x] Give a place a name that only just overflows. One or two characters go
       and the ellipsis appears, rather than half the name.
-- [ ] Give a place a one-word name that fits. It stays centred with no
+- [x] Give a place a one-word name that fits. It stays centred with no
       ellipsis.
-- [ ] Give a place a name of a single very wide character. The button shows an
+- [x] Give a place a name of a single very wide character. The button shows an
       ellipsis rather than an empty face.
-- [ ] Hover a shortened button. The tooltip shows the whole name.
-- [ ] Hover a button whose name fits. No tooltip appears.
-- [ ] Rename that place to something long, press OK, hover it again. The
+- [x] Hover a shortened button. The tooltip shows the whole name.
+- [x] Hover a button whose name fits. No tooltip appears.
+- [x] Rename that place to something long, press OK, hover it again. The
       tooltip appears with the new name.
-- [ ] Rename it back to something short and hover again. The tooltip is gone.
-- [ ] Remove enough places that a button hides, then hover where it was. No
+- [x] Rename it back to something short and hover again. The tooltip is gone.
+- [x] Remove enough places that a button hides, then hover where it was. No
       tooltip appears from the empty slot.
 - [x] Reorder places in Edit Places and press OK. The remote pane still uses
       its cached folders, since order changes no candidate.
@@ -411,4 +366,3 @@ have it, but the manual checks look at it.
 
 [ ] Think about moving the overwrite options into the transfer window
 [ ] Upload confirmation should also be gated on the overwrite setting
-[ ] existing overwrite settings but add/replace/remove beside the list, whereas the Places puts them under, and uses Rename not Replace
