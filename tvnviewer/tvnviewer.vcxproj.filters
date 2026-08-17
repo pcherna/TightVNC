@@ -39,6 +39,9 @@
     <ClCompile Include="FtEditPlacesDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FtOptionsDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="FileTransferMainDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -126,6 +129,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FtEditPlacesDialog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FtOptionsDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FileTransferMainDialog.h">

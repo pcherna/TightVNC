@@ -54,6 +54,58 @@ Full plan in `~/.claude/plans/vast-toasting-haven.md`.
 - [x] Add the new files to both project formats
 - [x] Build and run the phase 2b manual checks
 
+## Phase 3: streamlined downloads
+
+Plan in `~/.claude/plans/i-want-to-streamline-temporal-duckling.md`.
+
+- [x] `client-config-lib/FtAutoOverwrite.{h,cpp}` storing filename patterns
+      under `Software\TightVNC\Viewer\FtAutoOverwrite`, plus the glob matcher
+- [x] `ViewerConfig` gains `SkipDownloadConfirm`, defaulting to off
+- [x] `FileExistDialog::isSkipAll`, so a caller can stand down
+- [x] Guard the download confirmation, track the running direction, and answer
+      Overwrite on a pattern match in `onFtTargetFileExists`
+- [x] Grow `IDD_CONFIGURATION` to 221x320 and add the File Transfer group
+- [x] Add the new files to all three project formats
+- [x] Prove the matcher against a table of cases
+- [x] Make Enter act on the selection in all three text boxes, across the
+      Configuration and Edit Places dialogs
+- [x] Build and run the phase 3 manual checks
+
+### Phase 3 manual checks
+
+Written out here rather than left in the plan file, because the build happens
+on a different machine from the one that wrote them.
+
+The matcher is already proved. It was extracted from `FtAutoOverwrite.cpp` and
+run against 31 cases, so these checks cover the wiring around it, not the
+matching itself.
+
+- [x] Open Configuration. The File Transfer group renders without clipping and
+      the OK and Cancel buttons sit below it.
+- [x] Add `*.log` and `bill_202*.*`. Press OK. Check that
+      `HKCU\Software\TightVNC\Viewer\FtAutoOverwrite` holds values `0` and `1`.
+- [x] Reopen Configuration. Both patterns come back.
+- [x] Add a pattern, then press Cancel. The registry is unchanged.
+- [x] Connect, open file transfer, download a file with the checkbox off. The
+      confirmation still appears. Turn the checkbox on. It does not.
+- [x] Download `x.log` twice into a folder that already holds it. The second
+      download overwrites silently. The file's timestamp changes.
+- [x] Download `notes.txt` twice. The conflict dialog still appears.
+- [x] Start a multi-file download holding `a.log` and two non-matching files.
+      Press Skip All on the first conflict. `a.log` is skipped, not
+      overwritten.
+- [x] Upload a file that exists remotely. Both the confirmation and the
+      conflict dialog still appear.
+- [x] Remove every pattern and press OK. The registry key is empty and the
+      conflict dialog returns.
+- [x] Type a pattern and press Enter with no row selected. It is added and the
+      dialog stays open.
+- [x] Select a row, edit the text, press Enter. The row is replaced, not
+      duplicated.
+- [x] Press Enter with the pattern box empty. The dialog closes and saves.
+- [x] Repeat the three Enter checks in Edit Places, for both the place name box
+      (add, then rename) and the candidate path box (add, then replace).
+
 ## Phase 4: places on the toolbar
 
 The first few places of each pane get a button of their own, on a row above
@@ -137,6 +189,64 @@ the path box. Everything else moves behind one button at the end of that row.
       disabled.
 - [x] Close and reopen the file transfer dialog. The tooltip still works.
 
+## Phase 5: a dialog of its own for transfer options
+
+The file transfer settings sat in a group at the bottom of the viewer
+configuration dialog, which is reached from the tray icon and is nowhere near
+a transfer in progress. They move to a dialog of their own, opened by a gear
+button in the file transfer window.
+
+- [x] `tvnviewer/FtOptionsDialog.{h,cpp}`, holding the pattern editor moved
+      out of `ConfigurationDialog` unchanged
+- [x] `ViewerConfig` gains `SkipUploadConfirm`, defaulting to off
+- [x] Gate the upload confirmation on it, the way the download one is gated
+- [x] New `ftclient_optionsDialog` at 244x190, grouped by direction: an
+      Upload group holding one checkbox, and a Download group holding the
+      checkbox and the pattern editor
+- [x] Shrink `IDD_CONFIGURATION` back to 221x216 and drop the File Transfer
+      group, restoring `ConfigurationDialog.{h,cpp}` to their pre-phase-3 state
+- [x] Draw `res/gear.ico` at 16, 24, 32 and 48
+- [x] Gear button under the two transfer arrows, `BS_ICON` with the icon set
+      through `BM_SETIMAGE`
+- [x] A "Transfer Options" tooltip on it, sharing the places tooltip window
+- [x] Add the new files to all three project formats
+- [x] Build and run the phase 5 manual checks
+
+### Phase 5 manual checks
+
+- [x] Open Configuration from the tray icon. The File Transfer group is gone,
+      the window is short again, and OK and Cancel sit right below Logging.
+- [x] Open file transfer. A gear button sits below the two transfer arrows and
+      shows a gear, not an empty face or a box.
+- [x] Hover the gear. A "Transfer Options" tooltip appears.
+- [x] Press it. The Transfer Options dialog opens over the file transfer
+      window.
+- [x] Both checkboxes come back holding what the registry says. The pattern
+      list comes back filled.
+- [x] Add a pattern, press OK, reopen. The pattern is there and
+      `HKCU\Software\TightVNC\Viewer\FtAutoOverwrite` holds it.
+- [x] Add a pattern, press Cancel, reopen. Nothing was kept.
+- [x] Tick "before uploading", press OK. Check that
+      `HKCU\Software\TightVNC\Viewer\SkipUploadConfirm` is 1.
+- [x] Upload a file. The Yes/No box does not appear.
+- [x] Upload a file that exists remotely. The conflict dialog still appears,
+      even for a name matching a pattern.
+- [x] Untick it. The upload confirmation comes back.
+- [x] Tick "before downloading" and confirm downloads behave as they did.
+- [x] Add a pattern while a transfer is running, press OK, then start a new
+      download. The new pattern applies.
+- [x] Press the gear during a transfer. It is greyed with the other controls.
+- [x] Type a pattern and press Enter with no row selected. It is added and the
+      dialog stays open.
+- [x] Select a row, edit the text, press Enter. The row is replaced.
+- [x] Press Enter with the pattern box empty. The dialog closes and saves.
+- [x] Check that the Upload group holds one checkbox, and that the Download
+      group holds the other checkbox and the whole pattern editor.
+- [x] Tab through the dialog. The order runs upload checkbox, download
+      checkbox, list, the three buttons, pattern box, OK, Cancel.
+- [x] Check the dialog at 125 and 150 percent scaling. The gear stays sharp
+      and neither group clips.
+
 ## Domain rules
 
 Accreted as they surface. These are decisions, not guesses.
@@ -195,6 +305,34 @@ Accreted as they surface. These are decisions, not guesses.
   sense the standard containers ask for. Anything that would shift elements by
   assignment, `vector::erase` and whole-vector assignment both, is written as
   a rebuild through copy construction instead.
+- Both download shortcuts apply to downloads only. An upload that would replace
+  a remote file still asks, because the file at risk belongs to the other
+  machine.
+- A matching pattern always overwrites. There is no per-pattern skip action, so
+  the list reads as one rule rather than a rule set.
+- Patterns match the bare file name, not the path, and ignore case as the
+  Windows file system does.
+- A dot carries no special meaning in a pattern. `*.log` wants a name ending in
+  `.log` and `*.*` wants a name containing a dot. `PathMatchSpec` was rejected
+  for inheriting the DOS rule that `*.*` also matches a name with no extension,
+  and for adding a link dependency.
+- Skip All outranks the patterns. It is an explicit instruction about the whole
+  batch, said out loud during the transfer. Overwrite All needs no such check,
+  since it already reaches the same answer.
+- The file name is taken from the destination path, not from either `FileInfo`.
+  `DownloadOperation` and `UploadOperation` hand their source and target to
+  `targetFileExists` in opposite order, and a `FileInfo` carries whatever name
+  it was built with.
+- Patterns reload when a download starts, so an edit made in the configuration
+  dialog reaches the transfer already on screen.
+- The patterns live in their own registry key rather than in `ViewerConfig`. A
+  list needs numbered values and `SettingsManager` offers no way to store one.
+  A delimited single string was rejected because every plausible delimiter,
+  semicolons included, is legal in a Windows filename.
+- The list holds at most 64 patterns. Adding a 65th is refused in the editor
+  rather than dropped on save, so a pattern that will not be kept is never
+  shown as if it had been.
+- Both settings are global, not per host, matching how places are stored.
 - Enter in a text box beside a list acts on the selection. It renames or
   replaces the highlighted row, and adds a row when none is highlighted.
   Selecting a row copies it into the box, so select, edit, Enter has to mean
@@ -268,6 +406,34 @@ Accreted as they surface. These are decisions, not guesses.
 - Saving deletes every existing subkey tree first, so a nested key left by an
   earlier build disappears the next time the editor writes.
 
+- The file transfer settings live in a dialog of their own, opened from the
+  file transfer window. The configuration dialog is reached from the tray icon,
+  which is nowhere near a transfer in progress.
+- They live there only. Keeping them in both places would mean two dialogs
+  editing the same registry values, each needing to load and save correctly.
+- The upload setting covers the question asked before the transfer starts, and
+  nothing else. A remote file that would be replaced still opens the conflict
+  dialog, and the overwrite patterns stay downloads only. The file at risk
+  belongs to the other machine either way.
+- The gear button carries an icon and no caption, so a tooltip names it. It
+  joins the tooltip window the places arrows already use.
+- The icon is a real `.ico` at four sizes rather than a text glyph. `BS_ICON`
+  with `BM_SETIMAGE` renders the same everywhere, while a gear character
+  depends on the dialog font carrying it.
+- `LoadImage` at 16 by 16, not `LoadIcon`. `LoadIcon` answers with the large
+  icon and leaves the button to scale it down.
+- The pattern editor moved across unchanged. It was already self-contained, so
+  copying it whole kept one behaviour rather than growing a second.
+- `ConfigurationDialog` returns to exactly its pre-phase-3 state. Every change
+  ever made to it belonged to the group that moved out.
+- The options dialog groups by direction, not by kind of setting. Upload and
+  Download each hold everything that governs them, so the asymmetry between
+  the two sides is visible in the shape of the dialog. Grouping the two
+  checkboxes together under Confirmation hid it.
+- The options dialog saves settings itself rather than leaving it to the
+  viewer, because it is opened from a transfer and the next download reads the
+  setting straight back.
+
 ## Review
 
 Written at the end of each phase.
@@ -289,6 +455,42 @@ race with `executeOperation` deleting the operation that just finished. It does
 not. `FileTransferMessageProcessor::processRfbMessage` holds its listener lock
 across the whole dispatch, and `executeOperation` blocks on that same lock
 before it deletes. The delete cannot overlap the notify.
+
+### Phase 3
+
+Implementation complete, not yet compiled. The Windows build and the manual
+checks are still outstanding.
+
+The glob matcher is the one piece that could be proved here. It was extracted
+from `FtAutoOverwrite.cpp` and run against 31 cases on macOS, covering case
+folding, the `*.*` rule, and the backtracking a pattern such as `*a*b*c*`
+needs. All pass. The harness pulls the function straight out of the source, so
+it cannot drift from what ships.
+
+Three things surfaced while reading the code.
+
+`onFtTargetFileExists` serves both directions and `FileTransferCore` keeps its
+running state protected, so the dialog records the direction in the two button
+handlers instead. Reaching into the core would have been the larger change.
+
+`DownloadOperation` and `UploadOperation` pass their source and target to
+`targetFileExists` in opposite order. The destination path is the same thing in
+both directions, so the file name comes from there, through the existing
+`File::getName`.
+
+Skip All pressed partway through a batch would otherwise have been ignored for
+a matching file, since the pattern check runs before `FileExistDialog` gets to
+short-circuit. `isSkipAll` closes that.
+
+Enter was fixed in both dialogs rather than left as a wart. Each has a text box
+beside a list under a default OK button, so Enter closed the dialog and threw
+away what had been typed. All three boxes now act on the selection instead.
+
+One case remains. Typing into a box and then clicking OK with the mouse still
+discards the text, because the click moves focus to the button before the
+command arrives. Committing pending text on OK is a different design, and it
+would surprise anyone who left a box half edited. The Add button sits beside
+the box, so the model stays visible.
 
 ### Phase 4
 
@@ -364,5 +566,30 @@ have it, but the manual checks look at it.
 
 [ ] In the "File already exists" dialog, X doesn't seem to do anything
 
-[ ] Think about moving the overwrite options into the transfer window
-[ ] Upload confirmation should also be gated on the overwrite setting
+[x] Think about moving the overwrite options into the transfer window
+[x] Upload confirmation should also be gated on the overwrite setting
+
+### Phase 5
+
+Built and tested on Windows. All the phase 5 checks pass.
+
+The pattern editor moved across unchanged. It was already self-contained, so
+`ConfigurationDialog` gave up every line it had gained and returns to exactly
+its pre-phase-3 state, byte for byte. That is worth saying plainly: every
+change ever made to that file belonged to the group that moved out.
+
+The upload setting covers the confirmation and nothing else. Uploads still ask
+before replacing a remote file, and the overwrite patterns are still downloads
+only, so the rule about the file at risk belonging to the other machine
+survives intact. The Upload group holds one checkbox and nothing else, which
+says the same thing by its shape.
+
+The gear is a real icon rather than a text glyph. The places arrow got away
+with U+25BC because the dialog font carries it, but U+2699 is far less likely
+to be present, and a missing glyph draws a box. `res/gear.ico` holds 16, 24, 32
+and 48 pixel versions, and the button takes the 16 through `BM_SETIMAGE`.
+`LoadImage` is asked for that size directly, since `LoadIcon` answers with the
+large icon and would leave the button scaling it down.
+
+The gear was drawn on macOS and had never been rendered by Windows until the
+build. It reads correctly on a real button face at the default scaling.

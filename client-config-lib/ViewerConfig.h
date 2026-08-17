@@ -91,6 +91,30 @@ public:
   // Returns "prompt on fullscreen flag"
   bool isPromptOnFullscreenEnabled() const;
 
+  //
+  // Sets whether the file transfer dialog asks before starting a download.
+  //
+  // The question arrives right after files were selected and the download
+  // button was pressed, so for anyone who transfers often it only adds a
+  // keystroke.
+  //
+
+  void skipDownloadConfirmation(bool skip);
+  // Returns "skip download confirmation" flag
+  bool isDownloadConfirmationSkipped() const;
+
+  // Sets whether the file transfer dialog asks before starting an upload.
+  //
+  // This covers the question asked before the transfer starts, and nothing
+  // else. A remote file that would be replaced still opens the conflict
+  // dialog, because the file at risk belongs to the other machine. The
+  // overwrite patterns stay downloads only for the same reason.
+  //
+
+  void skipUploadConfirmation(bool skip);
+  // Returns "skip upload confirmation" flag
+  bool isUploadConfirmationSkipped() const;
+
   // Returns path to log file if file is avaliable to write,
   // returns NULL otherwise
   const TCHAR *getPathToLogFile() const;
@@ -111,6 +135,10 @@ protected:
   // If set then app must show promt dialog when viewer window
   // become fullscreen
   bool m_promptOnFullscreen;
+  // If set then the file transfer dialog starts a download without asking
+  bool m_skipDownloadConfirmation;
+  // If set then the file transfer dialog starts an upload without asking
+  bool m_skipUploadConfirmation;
   // Log file
   StringStorage m_pathToLogFile;
   StringStorage m_logName;

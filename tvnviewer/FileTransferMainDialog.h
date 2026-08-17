@@ -34,6 +34,7 @@
 
 #include "ft-common/FileInfo.h"
 
+#include "client-config-lib/FtAutoOverwrite.h"
 #include "client-config-lib/FtHostState.h"
 #include "client-config-lib/FtPlaces.h"
 
@@ -170,6 +171,15 @@ protected:
   //
 
   void initPlacesTooltip();
+
+  //
+  // Opens the transfer options, and picks up what changed.
+  //
+  // The settings used to sit in the viewer configuration dialog, which is
+  // reached from the tray icon and is nowhere near a transfer in progress.
+  //
+
+  void onOptionsButtonClick();
 
   //
   // Labels one place button, shortening the name to what the button can show,
@@ -411,6 +421,20 @@ protected:
   Control m_remotePlacesMoreButton;
 
   //
+  // Opens the transfer options. It sits under the two transfer arrows and
+  // carries a gear rather than a caption, so the tooltip names it.
+  //
+
+  Control m_optionsButton;
+
+  //
+  // The gear. Loaded from the resource at 16 by 16 and handed to the button,
+  // which owns nothing, so it is released with the dialog.
+  //
+
+  HICON m_gearIcon;
+
+  //
   // Tooltip window serving the whole places row. Owned by the dialog, so it
   // goes when the dialog does.
   //
@@ -511,6 +535,26 @@ protected:
 
   FtPlaces m_localPlaces;
   FtPlaces m_remotePlaces;
+
+  //
+  // Patterns whose downloads overwrite an existing local file without asking.
+  // Reloaded when a download starts, so an edit made in the configuration
+  // dialog reaches the transfer already in front of the user.
+  //
+
+  FtAutoOverwrite m_autoOverwrite;
+
+  //
+  // True while a download is the operation in flight, false while an upload
+  // is.
+  //
+  // onFtTargetFileExists serves both directions and the core does not offer
+  // the running state, so the two button handlers record it on the way past.
+  // The patterns must not answer for an upload, where the file at risk
+  // belongs to the other machine.
+  //
+
+  bool m_downloadInProgress;
 
 private:
 

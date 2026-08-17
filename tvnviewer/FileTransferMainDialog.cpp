@@ -29,6 +29,9 @@
 #include "NewFolderDialog.h"
 #include "FileRenameDialog.h"
 #include "FtEditPlacesDialog.h"
+#include "FtOptionsDialog.h"
+
+#include "client-config-lib/ViewerConfig.h"
 
 #include "file-lib/File.h"
 
@@ -48,7 +51,10 @@ FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core,
   m_chainFiredGeneration(0),
   m_localPlaces(RegistryPaths::VIEWER_PATH, false),
   m_remotePlaces(RegistryPaths::VIEWER_PATH, true),
-  m_placesTooltip(0)
+  m_autoOverwrite(RegistryPaths::VIEWER_PATH),
+  m_downloadInProgress(false),
+  m_placesTooltip(0),
+  m_gearIcon(0)
 {
   setResourceId(ftclient_mainDialog);
 
@@ -64,6 +70,10 @@ FileTransferMainDialog::FileTransferMainDialog(FileTransferCore *core,
 
 FileTransferMainDialog::~FileTransferMainDialog()
 {
+  if (m_gearIcon != 0) {
+    DestroyIcon(m_gearIcon);
+  }
+
   delete m_fakeMoveUpFolder;
   delete m_hostState;
 }
@@ -80,6 +90,30 @@ int FileTransferMainDialog::onFtTargetFileExists(FileInfo *sourceFileInfo,
                                                  FileInfo *targetFileInfo,
                                                  const TCHAR *pathToTargetFile)
 {
+  //
+  // Skip All is checked first because it says something about the whole
+  // batch, and the user said it out loud. Overwrite All needs no check, since
+  // it already reaches the same answer.
+  //
+
+  if (m_downloadInProgress && !m_fileExistDialog.isSkipAll()) {
+    //
+    // Taken from the path rather than from either FileInfo. The two
+    // operations hand their source and target to this method in opposite
+    // order, and a FileInfo carries whatever name it was built with, while
+    // the destination path is the same thing in both directions. Downloads
+    // build it with backslashes, which is the separator File splits on.
+    //
+
+    StringStorage fileName;
+    File targetFile(pathToTargetFile);
+    targetFile.getName(&fileName);
+
+    if (m_autoOverwrite.matchesAny(fileName.getString())) {
+      return CopyFileEventListener::TFE_OVERWRITE;
+    }
+  }
+
   m_fileExistDialog.setFilesInfo(targetFileInfo,
                                  sourceFileInfo,
                                  pathToTargetFile);
@@ -242,6 +276,9 @@ BOOL FileTransferMainDialog::onCommand(UINT controlID, UINT notificationID)
     break;
   case IDC_REMOTE_PLACE4_BUTTON:
     onPlaceButtonClick(true, 3);
+    break;
+  case IDC_FT_OPTIONS_BUTTON:
+    onOptionsButtonClick();
     break;
   case IDC_LOCAL_PLACES_MORE_BUTTON:
     onPlacesMoreButtonClick(false);
@@ -589,13 +626,15 @@ void FileTransferMainDialog::onUploadButtonClick()
     filesInfo[i] = *fileInfo;
   }
 
-  if (MessageBox(m_ctrlThis.getWindow(),
-                 _T("Do you wish to upload the selected files?"),
-                 _T("Upload Files"),
-                 MB_YESNO | MB_ICONQUESTION) != IDYES) {
-    delete[] indexes;
-    delete[] filesInfo;
-    return ;
+  if (!ViewerConfig::getInstance()->isUploadConfirmationSkipped()) {
+    if (MessageBox(m_ctrlThis.getWindow(),
+                   _T("Do you wish to upload the selected files?"),
+                   _T("Upload Files"),
+                   MB_YESNO | MB_ICONQUESTION) != IDYES) {
+      delete[] indexes;
+      delete[] filesInfo;
+      return ;
+    }
   }
 
   StringStorage localFolder;
@@ -606,6 +645,8 @@ void FileTransferMainDialog::onUploadButtonClick()
 
 
   m_fileExistDialog.resetDialogResultValue();
+
+  m_downloadInProgress = false;
 
   m_ftCore->uploadOperation(filesInfo, siCount,
                             localFolder.getString(),
@@ -634,13 +675,15 @@ void FileTransferMainDialog::onDownloadButtonClick()
     filesInfo[i] = *fileInfo;
   }
 
-  if (MessageBox(m_ctrlThis.getWindow(),
-                 _T("Do you wish to download the selected files?"),
-                 _T("Download Files"),
-                 MB_YESNO | MB_ICONQUESTION) != IDYES) {
-    delete[] indexes;
-    delete[] filesInfo;
-    return ;
+  if (!ViewerConfig::getInstance()->isDownloadConfirmationSkipped()) {
+    if (MessageBox(m_ctrlThis.getWindow(),
+                   _T("Do you wish to download the selected files?"),
+                   _T("Download Files"),
+                   MB_YESNO | MB_ICONQUESTION) != IDYES) {
+      delete[] indexes;
+      delete[] filesInfo;
+      return ;
+    }
   }
 
   StringStorage remoteFolder;
@@ -650,6 +693,14 @@ void FileTransferMainDialog::onDownloadButtonClick()
   getPathToCurrentLocalFolder(&localFolder);
 
   m_fileExistDialog.resetDialogResultValue();
+
+  //
+  // Reread rather than trust what was loaded when the dialog opened, so that
+  // a pattern added in the transfer options applies to this download.
+  //
+
+  m_downloadInProgress = true;
+  m_autoOverwrite.load();
 
   m_ftCore->downloadOperation(filesInfo, siCount,
                               localFolder.getString(),
@@ -829,6 +880,8 @@ void FileTransferMainDialog::enableControls(bool enabled)
   m_localPlacesMoreButton.setEnabled(enabled);
   m_remotePlacesMoreButton.setEnabled(enabled);
 
+  m_optionsButton.setEnabled(enabled);
+
   m_localFileListView.setEnabled(enabled);
   m_remoteFileListView.setEnabled(enabled);
 
@@ -872,6 +925,22 @@ void FileTransferMainDialog::initControls()
 
   m_localPlacesMoreButton.setWindow(GetDlgItem(hwnd, IDC_LOCAL_PLACES_MORE_BUTTON));
   m_remotePlacesMoreButton.setWindow(GetDlgItem(hwnd, IDC_REMOTE_PLACES_MORE_BUTTON));
+
+  m_optionsButton.setWindow(GetDlgItem(hwnd, IDC_FT_OPTIONS_BUTTON));
+
+  //
+  // LoadImage rather than LoadIcon, because LoadIcon answers with the large
+  // icon and the button would then scale it down itself.
+  //
+
+  m_gearIcon = (HICON)LoadImage(GetModuleHandle(0),
+                                MAKEINTRESOURCE(IDI_GEAR), IMAGE_ICON,
+                                16, 16, LR_DEFAULTCOLOR);
+
+  if (m_gearIcon != 0) {
+    SendMessage(m_optionsButton.getWindow(), BM_SETIMAGE, IMAGE_ICON,
+                reinterpret_cast<LPARAM>(m_gearIcon));
+  }
 
   m_cancelButton.setWindow(GetDlgItem(hwnd, IDC_CANCEL_BUTTON));
 
@@ -1113,6 +1182,7 @@ void FileTransferMainDialog::initPlacesTooltip()
   //
 
   static TCHAR placesText[] = _T("Places");
+  static TCHAR optionsText[] = _T("Transfer Options");
 
   //
   // Tooltips come from the bar classes, which nothing in this dialog would
@@ -1156,6 +1226,11 @@ void FileTransferMainDialog::initPlacesTooltip()
               reinterpret_cast<LPARAM>(&info));
 
   info.uId = reinterpret_cast<UINT_PTR>(m_remotePlacesMoreButton.getWindow());
+  SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
+              reinterpret_cast<LPARAM>(&info));
+
+  info.lpszText = optionsText;
+  info.uId = reinterpret_cast<UINT_PTR>(m_optionsButton.getWindow());
   SendMessage(m_placesTooltip, TTM_ADDTOOL, 0,
               reinterpret_cast<LPARAM>(&info));
 
@@ -1286,6 +1361,22 @@ bool FileTransferMainDialog::setPlaceButtonText(Control *button,
   button->setText(text.getString());
 
   return truncated;
+}
+
+void FileTransferMainDialog::onOptionsButtonClick()
+{
+  FtOptionsDialog options(&m_ctrlThis);
+
+  if (options.showModal() != IDOK) {
+    return;
+  }
+
+  //
+  // A download already under way reads the patterns when it starts, so it
+  // keeps the list it began with. This picks up the edit for the next one.
+  //
+
+  m_autoOverwrite.load();
 }
 
 void FileTransferMainDialog::updatePlaceButtons(bool remote)

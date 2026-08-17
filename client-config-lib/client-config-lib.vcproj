@@ -541,6 +541,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\FtAutoOverwrite.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\FtHostState.cpp"
 				>
 			</File>
@@ -568,6 +572,10 @@
 			</File>
 			<File
 				RelativePath=".\ConnectionConfigSM.h"
+				>
+			</File>
+			<File
+				RelativePath=".\FtAutoOverwrite.h"
 				>
 			</File>
 			<File
