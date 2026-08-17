@@ -106,6 +106,23 @@ private:
 
   void onMoveCandidate(int delta);
 
+  //
+  // Handles Enter pressed inside either text box, and returns true when it
+  // did.
+  //
+  // OK is the default button, so Enter would otherwise close the dialog and
+  // throw away whatever was typed. Enter acts on the selection instead: it
+  // renames or replaces the highlighted row, or adds a row when none is
+  // highlighted. Selecting a row copies it into the box, so select, edit,
+  // Enter has to mean rename or replace. Adding there would leave the old row
+  // behind next to a near-duplicate.
+  //
+  // An empty box is left to close the dialog, which is what Enter does
+  // everywhere else in it.
+  //
+
+  bool onTextBoxEnter();
+
   void onOkButtonClick();
 
   //

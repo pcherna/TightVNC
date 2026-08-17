@@ -187,7 +187,9 @@ BOOL FtEditPlacesDialog::onCommand(UINT controlID, UINT notificationID)
     onMoveCandidate(1);
     break;
   case IDOK:
-    onOkButtonClick();
+    if (!onTextBoxEnter()) {
+      onOkButtonClick();
+    }
     break;
   case IDCANCEL:
     kill(IDCANCEL);
@@ -529,6 +531,55 @@ void FtEditPlacesDialog::forgetChangedPlaces()
                                          before->name.getString());
     }
   }
+}
+
+bool FtEditPlacesDialog::onTextBoxEnter()
+{
+  HWND focus = GetFocus();
+
+  if (focus == m_placeNameBox.getWindow()) {
+    StringStorage typed;
+    m_placeNameBox.getText(&typed);
+
+    if (typed.isEmpty()) {
+      return false;
+    }
+
+    if (getSelectedPlace() >= 0) {
+      onRenamePlace();
+    } else {
+      onAddPlace();
+    }
+    return true;
+  }
+
+  if (focus == m_candidatePathBox.getWindow()) {
+    StringStorage typed;
+    m_candidatePathBox.getText(&typed);
+
+    if (typed.isEmpty()) {
+      return false;
+    }
+
+    //
+    // A candidate belongs to a place, so with none selected there is nothing
+    // Enter could do. The Add button is disabled in that state too, and
+    // swallowing the key keeps the typed path rather than closing on it.
+    //
+
+    if (getSelectedPlace() < 0) {
+      return true;
+    }
+
+    if (m_candidatesList.getSelectedIndex() >= 0) {
+      onReplaceCandidate();
+    } else {
+      onAddCandidate();
+    }
+    return true;
+  }
+
+  return false;
 }
 
 void FtEditPlacesDialog::onOkButtonClick()
