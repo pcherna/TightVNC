@@ -1232,6 +1232,12 @@ StringStorage ViewerWindow::formatWindowName() const
   } else {
     windowName.format(_T("%s"), ProductNames::VIEWER_PRODUCT_NAME);
   }
+  StringStorage titlePrefix = m_conData->getTitlePrefix();
+  if (!titlePrefix.isEmpty()) {
+    StringStorage prefixedName;
+    prefixedName.format(_T("%s - %s"), titlePrefix.getString(), windowName.getString());
+    windowName = prefixedName;
+  }
   return windowName;
 }
 

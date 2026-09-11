@@ -51,6 +51,7 @@ const TCHAR ViewerCmdLine::MOUSE_SWAP[] = _T("mouseswap");
 const TCHAR ViewerCmdLine::JPEG_IMAGE_QUALITY[] = _T("jpegimagequality");
 const TCHAR ViewerCmdLine::COMPRESSION_LEVEL[] = _T("compressionlevel");
 const TCHAR ViewerCmdLine::LOG_PATH[] = _T("logpath");
+const TCHAR ViewerCmdLine::TITLE_PREFIX[] = _T("titleprefix");
 
 
 const TCHAR ViewerCmdLine::YES[] = _T("yes");
@@ -124,7 +125,8 @@ void ViewerCmdLine::parse()
     MOUSE_SWAP,
     JPEG_IMAGE_QUALITY,
     COMPRESSION_LEVEL,
-    LOG_PATH
+    LOG_PATH,
+    TITLE_PREFIX
   };
 
   if (!processCmdLine(&options[0], sizeof(options) / sizeof(CmdLineOption))) {
@@ -157,6 +159,7 @@ void ViewerCmdLine::parse()
       throw CommandLineFormatException(StringTable::getString(IDS_ERROR_COMMAND_LINE));
   }
   parsePassword();
+  parseTitlePrefix();
   parseEncoding();
   parseMouseShape();
   parseMouseCursor();
@@ -245,6 +248,13 @@ void ViewerCmdLine::parsePassword()
 {
   if (isPresent(PASSWORD)) {
     m_conData->setPlainPassword(&m_options[PASSWORD]);
+  }
+}
+
+void ViewerCmdLine::parseTitlePrefix()
+{
+  if (isPresent(TITLE_PREFIX)) {
+    m_conData->setTitlePrefix(&m_options[TITLE_PREFIX]);
   }
 }
 

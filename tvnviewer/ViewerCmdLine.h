@@ -74,6 +74,7 @@ protected:
   static const TCHAR JPEG_IMAGE_QUALITY[];
   static const TCHAR COMPRESSION_LEVEL[];
   static const TCHAR LOG_PATH[];
+  static const TCHAR TITLE_PREFIX[];
 
 
   static const TCHAR YES[];
@@ -122,6 +123,7 @@ private:
   void parseJpegImageQuality();
   bool parseHost();
   void parseLogPath();
+  void parseTitlePrefix();
 };
 
 #endif

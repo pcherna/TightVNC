@@ -68,6 +68,12 @@ public:
   void setIncoming(bool isIncoming);
   bool isIncoming() const;
 
+  //
+  // This methods is setter and getter of the text prepended to the window title.
+  //
+  void setTitlePrefix(const StringStorage *titlePrefix);
+  StringStorage getTitlePrefix() const;
+
 protected:
   HostPath m_hostPath;
 
@@ -82,6 +88,9 @@ protected:
 
   // Saved password is crypted.
   StringStorage m_defaultPassword;
+
+  // Text prepended to the window title, empty if not set.
+  StringStorage m_titlePrefix;
 };
 
 

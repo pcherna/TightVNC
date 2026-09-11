@@ -40,7 +40,8 @@ ConnectionData::ConnectionData()
 ConnectionData::ConnectionData(const ConnectionData &connectionData)
 : m_isEmpty(connectionData.m_isEmpty),
   m_isSetPassword(connectionData.m_isSetPassword),
-  m_isIncoming(connectionData.m_isIncoming)
+  m_isIncoming(connectionData.m_isIncoming),
+  m_titlePrefix(connectionData.m_titlePrefix)
 {
   if (!connectionData.isEmpty()) {
     m_hostPath.set(connectionData.m_hostPath.get());
@@ -48,6 +49,16 @@ ConnectionData::ConnectionData(const ConnectionData &connectionData)
   if (m_isSetPassword) {
     m_defaultPassword = connectionData.m_defaultPassword;
   }
+}
+
+void ConnectionData::setTitlePrefix(const StringStorage *titlePrefix)
+{
+  m_titlePrefix = *titlePrefix;
+}
+
+StringStorage ConnectionData::getTitlePrefix() const
+{
+  return m_titlePrefix;
 }
 
 void ConnectionData::setIncoming(bool isIncoming)

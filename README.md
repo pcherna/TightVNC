@@ -25,6 +25,7 @@ The viewer reads and writes the same registry keys as stock TightVNC, under `HKC
   * An option to skip the "Do you wish to upload the selected files?"
   * An option to skip the "Do you wish to download the selected files?"
   * Support for one or more file patterns for which the Overwrite-confirmation dialog is skipped
+* A new `-titleprefix=TEXT` command-line option puts your own text at the front of the window title, ahead of the remote name. Handy when several viewer windows are open and the taskbar shows only machine names.
 * As part of this work, retargeted the build at Windows platform v141 (same but drops WinXP).
 
 ## Where the code came from
